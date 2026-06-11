@@ -281,7 +281,7 @@
     }
   };
 
-  // ../signalk-plotterext-bus/dist/chunk-L57VWLDL.js
+  // ../signalk-plotterext-bus/dist/chunk-EGWZMA5J.js
   var ExtensionClient = class {
     constructor(endpoint, handshake) {
       __publicField(this, "handshake");
@@ -385,7 +385,9 @@
     }
   };
   function connectExtension(opts = {}) {
-    const port = opts.port ?? windowPort(globalThis.parent);
+    const port = opts.port ?? windowPort(globalThis.parent, {
+      origin: "*"
+    });
     const endpoint = new BusEndpoint({
       port,
       callTimeoutMs: opts.callTimeoutMs,
