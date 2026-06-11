@@ -1,0 +1,70 @@
+// Build the widget/panel web assets into public/, which the Signal K server
+// serves at /signalk-instrument-widgets/ (signalk-webapp mechanism).
+
+import { build } from 'esbuild'
+import { cpSync, mkdirSync, writeFileSync } from 'node:fs'
+import { dirname, join } from 'node:path'
+import { fileURLToPath } from 'node:url'
+
+const root = join(dirname(fileURLToPath(import.meta.url)), '..')
+const pub = join(root, 'public')
+mkdirSync(join(pub, 'js'), { recursive: true })
+
+const entries = ['gauge', 'meter', 'switch', 'config']
+
+await build({
+  entryPoints: entries.map((name) => join(root, 'src/web', `${name}.js`)),
+  bundle: true,
+  format: 'iife',
+  outdir: join(pub, 'js'),
+  sourcemap: true,
+  target: ['es2020'],
+  logLevel: 'info'
+})
+
+cpSync(join(root, 'src/web/instruments.css'), join(pub, 'instruments.css'))
+
+const page = (name, bodyClass, title) => `<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>${title}</title>
+<link rel="stylesheet" href="instruments.css">
+</head>
+<body class="${bodyClass}">
+<div id="root"></div>
+<script src="js/${name}.js"></script>
+</body>
+</html>
+`
+
+writeFileSync(join(pub, 'gauge.html'), page('gauge', 'widget', 'Gauge'))
+writeFileSync(join(pub, 'meter.html'), page('meter', 'widget', 'Meter'))
+writeFileSync(join(pub, 'switch.html'), page('switch', 'widget', 'Switch'))
+writeFileSync(
+  join(pub, 'config.html'),
+  page('config', 'panel', 'Instrument Setup')
+)
+
+writeFileSync(
+  join(pub, 'index.html'),
+  `<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><title>Instrument Widgets</title>
+<link rel="stylesheet" href="instruments.css"></head>
+<body class="panel">
+<div id="root">
+<h2>Instrument Widgets</h2>
+<p class="status">This package provides gauge, meter and switch widgets for
+chartplotters that support the Signal K <code>plotterExtensions</code>
+resource type (e.g. Freeboard-SK). There is nothing to configure here:
+enable the extension in your chartplotter and place widgets from its
+widget menu.</p>
+</div>
+</body>
+</html>
+`
+)
+
+console.log('public/ assets written')
