@@ -12,7 +12,11 @@ const BOOLEAN = 'boolean'
 const WIDGET_FIELDS = {
   gauge: { pathKind: NUMERIC, fields: ['label', 'convert', 'min', 'max', 'decimals'] },
   meter: { pathKind: NUMERIC, fields: ['label', 'convert', 'decimals'] },
-  switch: { pathKind: BOOLEAN, fields: ['label'] }
+  switch: { pathKind: BOOLEAN, fields: ['label'] },
+  display: {
+    pathKind: NUMERIC,
+    fields: ['topLabel', 'bottomLabel', 'convert', 'decimals']
+  }
 }
 
 /** Flatten the Signal K full tree into [path, value] leaves. */
@@ -81,6 +85,24 @@ function buildForm(widgetType, paths, state) {
       fieldRow('label', 'Label', `<input id="label" value="${state.label ?? ''}" placeholder="Display name">`)
     )
   }
+  if (spec.fields.includes('topLabel')) {
+    rows.push(
+      fieldRow(
+        'topLabel',
+        'Top label',
+        `<input id="topLabel" value="${state.topLabel ?? ''}" placeholder="Small title (blank = hidden)">`
+      )
+    )
+  }
+  if (spec.fields.includes('bottomLabel')) {
+    rows.push(
+      fieldRow(
+        'bottomLabel',
+        'Bottom label',
+        `<input id="bottomLabel" value="${state.bottomLabel ?? ''}" placeholder="Large label (blank = hidden)">`
+      )
+    )
+  }
   if (spec.fields.includes('convert')) {
     const options = Object.entries(CONVERSIONS)
       .map(
@@ -107,6 +129,12 @@ function readForm(widgetType) {
   const get = (id) => document.getElementById(id)
   const values = { path: get('path').value.trim() }
   if (spec.fields.includes('label')) values.label = get('label').value.trim()
+  if (spec.fields.includes('topLabel')) {
+    values.topLabel = get('topLabel').value.trim()
+  }
+  if (spec.fields.includes('bottomLabel')) {
+    values.bottomLabel = get('bottomLabel').value.trim()
+  }
   if (spec.fields.includes('convert')) values.convert = get('convert').value
   if (spec.fields.includes('min')) {
     values.min = Number(get('min').value)

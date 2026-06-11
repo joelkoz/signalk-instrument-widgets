@@ -33,7 +33,11 @@ test('registers a read-only plotterExtensions provider with a valid manifest', a
   assert.strictEqual(manifest.apiVersion, '1')
   assert.ok(manifest.requires.includes('widgets'))
   assert.ok(manifest.requires.includes('signalk.stream'))
-  assert.strictEqual(manifest.widgets.length, 3)
+  assert.strictEqual(manifest.widgets.length, 4)
+  assert.deepStrictEqual(
+    manifest.widgets.map((w) => w.id),
+    ['gauge', 'meter', 'switch', 'display']
+  )
   for (const widget of manifest.widgets) {
     assert.match(widget.size, /^[12]x[12]$/)
     assert.strictEqual(widget.type, 'iframe')

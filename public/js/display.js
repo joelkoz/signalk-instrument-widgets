@@ -448,167 +448,112 @@
     "m-nm": { label: "m \u2192 nm", units: "nm", fn: (v) => v / 1852 },
     "pa-hpa": { label: "Pa \u2192 hPa", units: "hPa", fn: (v) => v / 100 }
   };
-
-  // src/web/config.js
-  var NUMERIC = "numeric";
-  var BOOLEAN = "boolean";
-  var WIDGET_FIELDS = {
-    gauge: { pathKind: NUMERIC, fields: ["label", "convert", "min", "max", "decimals"] },
-    meter: { pathKind: NUMERIC, fields: ["label", "convert", "decimals"] },
-    switch: { pathKind: BOOLEAN, fields: ["label"] },
-    display: {
-      pathKind: NUMERIC,
-      fields: ["topLabel", "bottomLabel", "convert", "decimals"]
-    }
-  };
-  function flattenTree(node, prefix = "", out = []) {
-    if (node === null || typeof node !== "object") return out;
-    if ("value" in node && (typeof node.value !== "object" || node.value === null)) {
-      out.push([prefix, node.value]);
-      return out;
-    }
-    for (const [key, child] of Object.entries(node)) {
-      if (key === "meta" || key === "timestamp" || key === "$source" || key === "values") {
-        continue;
-      }
-      flattenTree(child, prefix ? `${prefix}.${key}` : key, out);
-    }
-    return out;
+  function convert(value, conversionKey) {
+    const conv = CONVERSIONS[conversionKey] ?? CONVERSIONS.none;
+    return typeof value === "number" ? conv.fn(value) : value;
   }
-  function kindOf(value) {
-    if (typeof value === "number") return NUMERIC;
-    if (typeof value === "boolean") return BOOLEAN;
-    return null;
+  function conversionUnits(conversionKey) {
+    return (CONVERSIONS[conversionKey] ?? CONVERSIONS.none).units;
   }
-  async function fetchPaths(pathKind) {
-    const res = await fetch("/signalk/v1/api/vessels/self", {
-      credentials: "include"
-    });
-    if (!res.ok) throw new Error(`vessels/self fetch failed: ${res.status}`);
-    const tree = await res.json();
-    const leaves = flattenTree(tree);
-    const paths = [];
-    for (const [path, value] of leaves) {
-      const kind = kindOf(value);
-      if (kind === pathKind) paths.push(path);
-      if (pathKind === BOOLEAN && kind === NUMERIC && /(switches|\.state$)/.test(path)) {
-        paths.push(path);
-      }
-    }
-    return [...new Set(paths)].sort();
+  function formatValue(value, decimals = 1) {
+    if (typeof value !== "number" || !isFinite(value)) return "--";
+    return value.toFixed(decimals);
   }
-  function fieldRow(id, label, control) {
-    return `<label class="row"><span>${label}</span>${control}</label>`;
-  }
-  function buildForm(widgetType, paths, state) {
-    const spec = WIDGET_FIELDS[widgetType] ?? WIDGET_FIELDS.gauge;
-    const rows = [];
-    rows.push(
-      fieldRow(
-        "path",
-        "Signal K path",
-        `<input id="path" list="paths" value="${state.path ?? ""}" placeholder="Type to search...">
-       <datalist id="paths">${paths.map((p) => `<option value="${p}">`).join("")}</datalist>`
-      )
-    );
-    if (spec.fields.includes("label")) {
-      rows.push(
-        fieldRow("label", "Label", `<input id="label" value="${state.label ?? ""}" placeholder="Display name">`)
-      );
-    }
-    if (spec.fields.includes("topLabel")) {
-      rows.push(
-        fieldRow(
-          "topLabel",
-          "Top label",
-          `<input id="topLabel" value="${state.topLabel ?? ""}" placeholder="Small title (blank = hidden)">`
-        )
-      );
-    }
-    if (spec.fields.includes("bottomLabel")) {
-      rows.push(
-        fieldRow(
-          "bottomLabel",
-          "Bottom label",
-          `<input id="bottomLabel" value="${state.bottomLabel ?? ""}" placeholder="Large label (blank = hidden)">`
-        )
-      );
-    }
-    if (spec.fields.includes("convert")) {
-      const options = Object.entries(CONVERSIONS).map(
-        ([key, c]) => `<option value="${key}" ${state.convert === key ? "selected" : ""}>${c.label}</option>`
-      ).join("");
-      rows.push(fieldRow("convert", "Conversion", `<select id="convert">${options}</select>`));
-    }
-    if (spec.fields.includes("min")) {
-      rows.push(fieldRow("min", "Minimum", `<input id="min" type="number" step="any" value="${state.min ?? 0}">`));
-      rows.push(fieldRow("max", "Maximum", `<input id="max" type="number" step="any" value="${state.max ?? 10}">`));
-    }
-    if (spec.fields.includes("decimals")) {
-      rows.push(
-        fieldRow("decimals", "Decimals", `<input id="decimals" type="number" min="0" max="4" value="${state.decimals ?? 1}">`)
-      );
-    }
-    return rows.join("");
-  }
-  function readForm(widgetType) {
-    const spec = WIDGET_FIELDS[widgetType] ?? WIDGET_FIELDS.gauge;
-    const get = (id) => document.getElementById(id);
-    const values = { path: get("path").value.trim() };
-    if (spec.fields.includes("label")) values.label = get("label").value.trim();
-    if (spec.fields.includes("topLabel")) {
-      values.topLabel = get("topLabel").value.trim();
-    }
-    if (spec.fields.includes("bottomLabel")) {
-      values.bottomLabel = get("bottomLabel").value.trim();
-    }
-    if (spec.fields.includes("convert")) values.convert = get("convert").value;
-    if (spec.fields.includes("min")) {
-      values.min = Number(get("min").value);
-      values.max = Number(get("max").value);
-    }
-    if (spec.fields.includes("decimals")) {
-      values.decimals = Number(get("decimals").value);
-    }
-    return values;
-  }
-  async function main() {
-    const root = document.getElementById("root");
-    const client = await connectExtension();
-    const widgetType = client.context.targetWidget ?? "gauge";
-    const spec = WIDGET_FIELDS[widgetType] ?? WIDGET_FIELDS.gauge;
-    root.innerHTML = '<p class="status">Loading Signal K paths\u2026</p>';
-    const [paths, state] = await Promise.all([
-      fetchPaths(spec.pathKind).catch(() => []),
-      client.state.get()
-    ]);
-    root.innerHTML = `
-    <h2>Configure ${widgetType}</h2>
-    <form id="form">${buildForm(widgetType, paths, state)}</form>
-    <p class="status" id="status"></p>
-    <div class="actions">
-      <button type="button" id="cancel">Cancel</button>
-      <button type="button" id="save" class="primary">Save</button>
-    </div>`;
-    const status = document.getElementById("status");
-    document.getElementById("save").addEventListener("click", async () => {
-      try {
-        await client.state.set(readForm(widgetType));
-        status.textContent = "Saved.";
-        await client.call("ui.closePanel").catch(() => {
+  var LONG_PRESS_MS = 600;
+  function installLongPress(client) {
+    let timer = null;
+    let fired = false;
+    const start = () => {
+      fired = false;
+      timer = setTimeout(() => {
+        fired = true;
+        client.call("ui.openConfigPanel").catch(() => {
         });
-      } catch (err) {
-        status.textContent = `Save failed: ${err.message}`;
-      }
-    });
-    document.getElementById("cancel").addEventListener("click", () => {
-      client.call("ui.closePanel").catch(() => {
-      });
-    });
+      }, LONG_PRESS_MS);
+    };
+    const cancel = () => {
+      if (timer) clearTimeout(timer);
+      timer = null;
+    };
+    window.addEventListener("pointerdown", start);
+    window.addEventListener("pointerup", cancel);
+    window.addEventListener("pointercancel", cancel);
+    window.addEventListener("pointerleave", cancel);
+    return () => fired;
   }
-  main().catch((err) => {
-    document.getElementById("root").textContent = `Host connection failed: ${err.message}`;
+  async function startInstrument({ defaults = {}, onUpdate }) {
+    const client = await connectExtension();
+    const longPressFired = installLongPress(client);
+    let config = { ...defaults };
+    let value;
+    let unsubscribeSk = null;
+    const emit = () => onUpdate({ config, value, client });
+    async function applyConfig() {
+      const stored = await client.state.get();
+      config = { ...defaults, ...stored };
+      value = void 0;
+      if (unsubscribeSk) {
+        const u = unsubscribeSk;
+        unsubscribeSk = null;
+        await u().catch(() => {
+        });
+      }
+      emit();
+      if (config.path) {
+        unsubscribeSk = await client.signalk.subscribe([config.path], (ev) => {
+          value = ev.value;
+          emit();
+        });
+      }
+    }
+    await client.subscribe(["state.changed"], () => {
+      applyConfig().catch((err) => console.warn("config reload failed", err));
+    });
+    await applyConfig();
+    return { client, longPressFired };
+  }
+
+  // src/web/display.js
+  function esc(s) {
+    return String(s).replace(
+      /[&<>"]/g,
+      (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]
+    );
+  }
+  function render({ config, value }) {
+    const root = document.getElementById("root");
+    const display = convert(value, config.convert);
+    const units = config.units || conversionUnits(config.convert);
+    let text;
+    if (value === void 0 || value === null) {
+      text = "--";
+    } else if (typeof display === "number") {
+      text = formatValue(display, Number(config.decimals ?? 1));
+    } else {
+      text = String(display);
+    }
+    const configured = !!config.path;
+    const rows = [];
+    if (config.topLabel) {
+      rows.push(`<div class="display-top">${esc(config.topLabel)}</div>`);
+    }
+    rows.push(
+      `<div class="display-value">${esc(text)}${units ? `<span class="display-units">${esc(units)}</span>` : ""}</div>`
+    );
+    if (config.bottomLabel) {
+      rows.push(`<div class="display-bottom">${esc(config.bottomLabel)}</div>`);
+    }
+    if (!configured) {
+      rows.push('<div class="display-bottom">Not configured</div>');
+    }
+    root.innerHTML = `<div class="display">${rows.join("")}</div>`;
+  }
+  startInstrument({
+    defaults: { convert: "none", decimals: 1, topLabel: "", bottomLabel: "" },
+    onUpdate: render
+  }).catch((err) => {
+    document.getElementById("root").textContent = "Host connection failed";
     console.error(err);
   });
 })();
-//# sourceMappingURL=config.js.map
+//# sourceMappingURL=display.js.map

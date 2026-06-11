@@ -8,11 +8,17 @@ Freeboard-SK):
 - **Gauge** (1x1) — a dial for any numeric Signal K path.
 - **Meter** (2x1) — a 0–100% bar for ratio-style paths.
 - **Switch** (1x1) — displays a boolean/0-1 path; tap to actuate via PUT.
+- **Display Value** (1x1) — centered text readout: small top label, large
+  live value in the middle, larger bottom label (blank labels are hidden) —
+  e.g. "Speed over ground" / value / "SOG".
 
-Each placed widget instance is configured independently: press and hold a
-widget to open its setup panel, pick a Signal K path (with optional unit
-conversion, range and label), and save. Configuration is stored per instance
-through the host's state API, so two gauges can show two different values.
+In the chartplotter, press and hold an **empty** widget area to add a widget
+(its setup panel opens automatically), and press and hold a **placed**
+widget to reconfigure it. Each placed instance is configured independently —
+pick a Signal K path with optional unit conversion, range and labels — so
+two gauges can show two different values. Configuration is stored per
+instance through the host's state API, and the setup panel includes a
+host-provided button to remove the widget.
 
 ## How it works
 

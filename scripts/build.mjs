@@ -10,7 +10,7 @@ const root = join(dirname(fileURLToPath(import.meta.url)), '..')
 const pub = join(root, 'public')
 mkdirSync(join(pub, 'js'), { recursive: true })
 
-const entries = ['gauge', 'meter', 'switch', 'config']
+const entries = ['gauge', 'meter', 'switch', 'display', 'config']
 
 await build({
   entryPoints: entries.map((name) => join(root, 'src/web', `${name}.js`)),
@@ -43,6 +43,10 @@ writeFileSync(join(pub, 'gauge.html'), page('gauge', 'widget', 'Gauge'))
 writeFileSync(join(pub, 'meter.html'), page('meter', 'widget', 'Meter'))
 writeFileSync(join(pub, 'switch.html'), page('switch', 'widget', 'Switch'))
 writeFileSync(
+  join(pub, 'display.html'),
+  page('display', 'widget', 'Display Value')
+)
+writeFileSync(
   join(pub, 'config.html'),
   page('config', 'panel', 'Instrument Setup')
 )
@@ -56,11 +60,12 @@ writeFileSync(
 <body class="panel">
 <div id="root">
 <h2>Instrument Widgets</h2>
-<p class="status">This package provides gauge, meter and switch widgets for
-chartplotters that support the Signal K <code>plotterExtensions</code>
-resource type (e.g. Freeboard-SK). There is nothing to configure here:
-enable the extension in your chartplotter and place widgets from its
-widget menu.</p>
+<p class="status">This package provides gauge, meter, switch and display
+widgets for chartplotters that support the Signal K
+<code>plotterExtensions</code> resource type (e.g. Freeboard-SK). There is
+nothing to configure here: in your chartplotter, press and hold an empty
+widget area to add a widget, and press and hold a placed widget to
+configure it.</p>
 </div>
 </body>
 </html>

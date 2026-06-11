@@ -17,11 +17,12 @@ the plugin id `signalk-instrument-widgets`:
   any of these must not offer the extension.
 - `optional: ["signalk.put"]` — the switch widget degrades to display-only
   on hosts without PUT relay.
-- Three widgets, all `type: "iframe"`, all naming `configPanel:
+- Four widgets, all `type: "iframe"`, all naming `configPanel:
   "instrument-config"`, all `lifecycle: "whileEnabled"`:
   - `gauge` — size `1x1`
   - `meter` — size `2x1`
   - `switch` — size `1x1`
+  - `display` — size `1x1`
 - One panel: `instrument-config`, `type: "iframe"`, `lifecycle: "onOpen"`.
 - All asset URLs are server-relative under `/signalk-instrument-widgets/`
   (hosts resolve them against the Signal K server origin).
@@ -57,6 +58,11 @@ Per widget:
   via `signalk.put` with the inverted value (1/0); a tap that was actually
   a long press must not actuate; no actuation attempt when the host lacks
   the `signalk.put` capability or no path is configured.
+- **Display Value**: three center-justified rows — optional small top
+  label, the live value in the largest text (with converted units), and an
+  optional larger bottom label. A blank label renders nothing (the value
+  re-centers). Example: top "Speed over ground", bottom "SOG", value in the
+  middle. Label text is HTML-escaped before rendering.
 
 ## 3. Configuration panel
 
@@ -71,6 +77,7 @@ Per widget:
   - gauge: path, label, conversion, min, max, decimals
   - meter: path, label, conversion, decimals
   - switch: path, label
+  - display: path, topLabel, bottomLabel, conversion, decimals
 - Save writes all fields with one `state.set` call (the host's resulting
   `state.changed` event live-updates the widget) and then closes itself via
   `ui.closePanel`. Cancel closes without writing.
@@ -80,11 +87,13 @@ Per widget:
 Stored through the host state API, instance scope. All keys optional:
 
 ```
-path      string   Signal K path (dot notation)
-label     string   display label (falls back to path)
-convert   string   conversion key (see below)
-min, max  number   gauge dial bounds
-decimals  number   displayed decimal places
+path         string   Signal K path (dot notation)
+label        string   display label (falls back to path)
+topLabel     string   display widget: small top title (blank = hidden)
+bottomLabel  string   display widget: large bottom label (blank = hidden)
+convert      string   conversion key (see below)
+min, max     number   gauge dial bounds
+decimals     number   displayed decimal places
 ```
 
 Conversion keys: `none`, `ms-kn`, `ms-kmh`, `ms-mph`, `k-c`, `k-f`,

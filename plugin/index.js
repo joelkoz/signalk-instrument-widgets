@@ -52,6 +52,15 @@ function buildManifest() {
         size: '1x1',
         configPanel: 'instrument-config',
         lifecycle: 'whileEnabled'
+      },
+      {
+        id: 'display',
+        title: 'Display Value',
+        type: 'iframe',
+        url: `${ASSET_BASE}/display.html`,
+        size: '1x1',
+        configPanel: 'instrument-config',
+        lifecycle: 'whileEnabled'
       }
     ],
     panels: [
