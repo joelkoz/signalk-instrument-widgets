@@ -19,10 +19,10 @@ function render({ config, value }) {
 
   root.innerHTML = `
   <svg viewBox="0 0 200 100" preserveAspectRatio="xMidYMid meet">
-    <text x="100" y="22" class="label">${label}</text>
-    <rect x="14" y="38" width="172" height="22" rx="6" class="track"/>
-    <rect x="14" y="38" width="${(172 * pct) / 100}" height="22" rx="6" class="fillbar"/>
-    <text x="100" y="88" class="value meter-value">${formatValue(display, Number(config.decimals ?? 0))}%</text>
+    <text x="100" y="18" class="label meter-label">${label}</text>
+    <rect x="8" y="28" width="184" height="32" rx="8" class="track"/>
+    <rect x="8" y="28" width="${(184 * pct) / 100}" height="32" rx="8" class="fillbar"/>
+    <text x="100" y="92" class="value meter-value">${formatValue(display, Number(config.decimals ?? 0))}%</text>
   </svg>`
 }
 

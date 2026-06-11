@@ -60,26 +60,29 @@ svg .hub {
 }
 svg .value {
   fill: #ffffff;
-  font-size: 15px;
+  font-size: 20px;
   font-weight: 600;
   text-anchor: middle;
 }
 svg .meter-value {
-  font-size: 20px;
+  font-size: 28px;
 }
 svg .units {
   fill: #9fb3c4;
-  font-size: 8px;
+  font-size: 9px;
   text-anchor: middle;
 }
 svg .label {
   fill: #9fb3c4;
-  font-size: 8px;
+  font-size: 10px;
   text-anchor: middle;
+}
+svg .meter-label {
+  font-size: 12px;
 }
 svg .bound {
   fill: #6c7f8e;
-  font-size: 7px;
+  font-size: 8px;
   text-anchor: middle;
 }
 svg .fillbar {
@@ -100,17 +103,17 @@ svg rect.track {
   cursor: pointer;
 }
 .switch-pill {
-  width: 64px;
-  height: 30px;
-  border-radius: 15px;
+  width: 76px;
+  height: 36px;
+  border-radius: 18px;
   background: rgba(255, 255, 255, 0.18);
   position: relative;
   transition: background 0.15s;
 }
 .switch-knob {
-  width: 26px;
-  height: 26px;
-  border-radius: 13px;
+  width: 32px;
+  height: 32px;
+  border-radius: 16px;
   background: #cfd8dc;
   position: absolute;
   top: 2px;
@@ -121,18 +124,18 @@ svg rect.track {
   background: #2e7d32;
 }
 .switch.on .switch-knob {
-  left: 36px;
+  left: 42px;
   background: #ffffff;
 }
 .switch-state {
-  font-size: 16px;
+  font-size: 20px;
   font-weight: 600;
 }
 .switch.unknown .switch-state {
   color: #6c7f8e;
 }
 .switch-label {
-  font-size: 11px;
+  font-size: 13px;
   color: #9fb3c4;
   text-align: center;
   max-width: 95%;
@@ -147,36 +150,36 @@ svg rect.track {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 2px;
+  gap: 0;
   color: #e8edf2;
   text-align: center;
   width: 100%;
-  padding: 4px;
+  padding: 2px;
   box-sizing: border-box;
 }
 .display-top {
-  font-size: 11px;
+  font-size: 13px;
   color: #9fb3c4;
-  max-width: 95%;
+  max-width: 97%;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 .display-value {
-  font-size: 30px;
+  font-size: 40px;
   font-weight: 600;
-  line-height: 1.1;
+  line-height: 1.05;
 }
 .display-units {
-  font-size: 13px;
+  font-size: 15px;
   font-weight: 400;
   color: #9fb3c4;
   margin-left: 4px;
 }
 .display-bottom {
-  font-size: 16px;
+  font-size: 22px;
   color: #c3d2de;
-  max-width: 95%;
+  max-width: 97%;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
