@@ -8,9 +8,16 @@
     "signalk-webapp",
     "signalk-category-utility"
   ],
+  "files": [
+    "plugin",
+    "public",
+    "README.md",
+    "LICENSE"
+  ],
   "scripts": {
     "build": "node scripts/build.mjs",
-    "test": "node --test \"test/**/*.test.js\" \"test/**/*.test.mjs\""
+    "test": "node --test \"test/**/*.test.js\" \"test/**/*.test.mjs\"",
+    "prepare": "node scripts/build.mjs"
   },
   "author": "Joel Kozikowski",
   "license": "MIT",
