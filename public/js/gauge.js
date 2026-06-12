@@ -446,6 +446,7 @@
     "ratio-pct": { label: "ratio \u2192 %", units: "%", fn: (v) => v * 100 },
     "m-ft": { label: "m \u2192 ft", units: "ft", fn: (v) => v * 3.28084 },
     "m-nm": { label: "m \u2192 nm", units: "nm", fn: (v) => v / 1852 },
+    "m-km": { label: "m \u2192 km", units: "km", fn: (v) => v / 1e3 },
     "pa-hpa": { label: "Pa \u2192 hPa", units: "hPa", fn: (v) => v / 100 }
   };
   function convert(value, conversionKey) {

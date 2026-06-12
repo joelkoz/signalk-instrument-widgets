@@ -446,8 +446,53 @@
     "ratio-pct": { label: "ratio \u2192 %", units: "%", fn: (v) => v * 100 },
     "m-ft": { label: "m \u2192 ft", units: "ft", fn: (v) => v * 3.28084 },
     "m-nm": { label: "m \u2192 nm", units: "nm", fn: (v) => v / 1852 },
+    "m-km": { label: "m \u2192 km", units: "km", fn: (v) => v / 1e3 },
     "pa-hpa": { label: "Pa \u2192 hPa", units: "hPa", fn: (v) => v / 100 }
   };
+
+  // src/web/units.mjs
+  var VALID_BY_UNIT = {
+    "m/s": ["none", "ms-kn", "ms-kmh", "ms-mph"],
+    K: ["none", "k-c", "k-f"],
+    rad: ["none", "rad-deg"],
+    ratio: ["none", "ratio-pct"],
+    m: ["none", "m-ft", "m-nm", "m-km"],
+    Pa: ["none", "pa-hpa"]
+  };
+  function validConversions(units, allKeys) {
+    return units && VALID_BY_UNIT[units] || allKeys;
+  }
+  function defaultConversion(units, path, prefs) {
+    switch (units) {
+      case "m/s": {
+        const speed = prefs?.speed;
+        if (speed === "km/h") return "ms-kmh";
+        if (speed === "mph") return "ms-mph";
+        if (speed === "m/s") return "none";
+        return "ms-kn";
+      }
+      case "K":
+        return prefs?.temperature === "F" ? "k-f" : "k-c";
+      case "rad":
+        return "rad-deg";
+      case "ratio":
+        return "ratio-pct";
+      case "Pa":
+        return "pa-hpa";
+      case "m": {
+        const p = path ?? "";
+        if (/depth/i.test(p)) {
+          return prefs?.depth === "foot" ? "m-ft" : "none";
+        }
+        if (/(distance|log|range)/i.test(p)) {
+          return prefs?.distance === "naut-mile" ? "m-nm" : "m-km";
+        }
+        return prefs?.length === "foot" ? "m-ft" : "none";
+      }
+      default:
+        return "none";
+    }
+  }
 
   // src/web/config.js
   var NUMERIC = "numeric";
@@ -464,7 +509,7 @@
   function flattenTree(node, prefix = "", out = []) {
     if (node === null || typeof node !== "object") return out;
     if ("value" in node && (typeof node.value !== "object" || node.value === null)) {
-      out.push([prefix, node.value]);
+      out.push([prefix, node.value, node.meta?.units]);
       return out;
     }
     for (const [key, child] of Object.entries(node)) {
@@ -488,14 +533,16 @@
     const tree = await res.json();
     const leaves = flattenTree(tree);
     const paths = [];
-    for (const [path, value] of leaves) {
+    const unitsByPath = {};
+    for (const [path, value, metaUnits] of leaves) {
+      if (metaUnits) unitsByPath[path] = metaUnits;
       const kind = kindOf(value);
       if (kind === pathKind) paths.push(path);
       if (pathKind === BOOLEAN && kind === NUMERIC && /(switches|\.state$)/.test(path)) {
         paths.push(path);
       }
     }
-    return [...new Set(paths)].sort();
+    return { paths: [...new Set(paths)].sort(), unitsByPath };
   }
   function fieldRow(id, label, control) {
     return `<label class="row"><span>${label}</span>${control}</label>`;
@@ -535,10 +582,9 @@
       );
     }
     if (spec.fields.includes("convert")) {
-      const options = Object.entries(CONVERSIONS).map(
-        ([key, c]) => `<option value="${key}" ${state.convert === key ? "selected" : ""}>${c.label}</option>`
-      ).join("");
-      rows.push(fieldRow("convert", "Conversion", `<select id="convert">${options}</select>`));
+      rows.push(
+        fieldRow("convert", "Conversion", `<select id="convert"></select>`)
+      );
     }
     if (spec.fields.includes("min")) {
       rows.push(fieldRow("min", "Minimum", `<input id="min" type="number" step="any" value="${state.min ?? 0}">`));
@@ -572,15 +618,27 @@
     }
     return values;
   }
+  function refreshConversionOptions(unitsByPath, prefs, savedPath, savedConvert) {
+    const select = document.getElementById("convert");
+    if (!select) return;
+    const path = document.getElementById("path").value.trim();
+    const units = unitsByPath[path];
+    const valid = validConversions(units, Object.keys(CONVERSIONS));
+    const selected = path === savedPath && savedConvert && valid.includes(savedConvert) ? savedConvert : defaultConversion(units, path, prefs);
+    select.innerHTML = valid.map(
+      (key) => `<option value="${key}" ${key === selected ? "selected" : ""}>${CONVERSIONS[key].label}</option>`
+    ).join("");
+  }
   async function main() {
     const root = document.getElementById("root");
     const client = await connectExtension();
     const widgetType = client.context.targetWidget ?? "gauge";
     const spec = WIDGET_FIELDS[widgetType] ?? WIDGET_FIELDS.gauge;
     root.innerHTML = '<p class="status">Loading Signal K paths\u2026</p>';
-    const [paths, state] = await Promise.all([
-      fetchPaths(spec.pathKind).catch(() => []),
-      client.state.get()
+    const [{ paths, unitsByPath }, state, prefs] = await Promise.all([
+      fetchPaths(spec.pathKind).catch(() => ({ paths: [], unitsByPath: {} })),
+      client.state.get(),
+      client.hasCapability("units") ? client.call("units.get").then((r) => r.units).catch(() => null) : Promise.resolve(null)
     ]);
     root.innerHTML = `
     <h2>Configure ${widgetType}</h2>
@@ -590,6 +648,15 @@
       <button type="button" id="cancel">Cancel</button>
       <button type="button" id="save" class="primary">Save</button>
     </div>`;
+    if (spec.fields.includes("convert")) {
+      const refresh = () => refreshConversionOptions(unitsByPath, prefs, state.path, state.convert);
+      refresh();
+      const pathInput = document.getElementById("path");
+      pathInput.addEventListener("change", refresh);
+      pathInput.addEventListener("input", () => {
+        if (unitsByPath[pathInput.value.trim()] !== void 0) refresh();
+      });
+    }
     const status = document.getElementById("status");
     document.getElementById("save").addEventListener("click", async () => {
       try {

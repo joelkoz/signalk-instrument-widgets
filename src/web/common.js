@@ -25,6 +25,7 @@ export const CONVERSIONS = {
   'ratio-pct': { label: 'ratio → %', units: '%', fn: (v) => v * 100 },
   'm-ft': { label: 'm → ft', units: 'ft', fn: (v) => v * 3.28084 },
   'm-nm': { label: 'm → nm', units: 'nm', fn: (v) => v / 1852 },
+  'm-km': { label: 'm → km', units: 'km', fn: (v) => v / 1000 },
   'pa-hpa': { label: 'Pa → hPa', units: 'hPa', fn: (v) => v / 100 }
 }
 

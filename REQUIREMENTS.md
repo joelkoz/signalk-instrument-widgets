@@ -71,8 +71,20 @@ Per widget:
   `switch`). State reads/writes apply to the target instance's scope.
 - Path candidates come from the server's full data tree
   (`/signalk/v1/api/vessels/self`, same-origin fetch): numeric leaves for
-  gauge/meter; boolean leaves — plus numeric leaves that look switch-like
-  (`switches` segment or `.state` suffix) — for the switch.
+  gauge/meter/display; boolean leaves — plus numeric leaves that look
+  switch-like (`switches` segment or `.state` suffix) — for the switch. The
+  same walk collects each path's `meta.units`.
+- Conversion selection is unit-aware (logic in `src/web/units.mjs`):
+  - Offered conversions are filtered to those valid for the selected path's
+    `meta.units` (paths without metadata offer everything).
+  - The preselected conversion combines the path's units with the host's
+    preferred display units (`units.get`, capability `units`; tolerated
+    absent): speed/temperature follow the preference directly; metre paths
+    disambiguate by path name (depth -> depth preference, distance/log ->
+    distance preference, otherwise length preference); angles, ratios and
+    pressure default to degrees, percent and hPa.
+  - A previously saved conversion is kept while the saved path is selected;
+    choosing a different path re-derives the default.
 - Fields by widget type:
   - gauge: path, label, conversion, min, max, decimals
   - meter: path, label, conversion, decimals

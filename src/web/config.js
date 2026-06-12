@@ -5,6 +5,7 @@
 
 import { connectExtension } from 'signalk-plotterext-bus/extension'
 import { CONVERSIONS } from './common.js'
+import { validConversions, defaultConversion } from './units.mjs'
 
 const NUMERIC = 'numeric'
 const BOOLEAN = 'boolean'
@@ -19,11 +20,11 @@ const WIDGET_FIELDS = {
   }
 }
 
-/** Flatten the Signal K full tree into [path, value] leaves. */
+/** Flatten the Signal K full tree into [path, value, metaUnits] leaves. */
 function flattenTree(node, prefix = '', out = []) {
   if (node === null || typeof node !== 'object') return out
   if ('value' in node && (typeof node.value !== 'object' || node.value === null)) {
-    out.push([prefix, node.value])
+    out.push([prefix, node.value, node.meta?.units])
     return out
   }
   for (const [key, child] of Object.entries(node)) {
@@ -41,6 +42,10 @@ function kindOf(value) {
   return null
 }
 
+/**
+ * Candidate paths for a widget kind, plus a path -> SK meta units map used
+ * for unit-aware conversion selection.
+ */
 async function fetchPaths(pathKind) {
   const res = await fetch('/signalk/v1/api/vessels/self', {
     credentials: 'include'
@@ -49,7 +54,9 @@ async function fetchPaths(pathKind) {
   const tree = await res.json()
   const leaves = flattenTree(tree)
   const paths = []
-  for (const [path, value] of leaves) {
+  const unitsByPath = {}
+  for (const [path, value, metaUnits] of leaves) {
+    if (metaUnits) unitsByPath[path] = metaUnits
     const kind = kindOf(value)
     if (kind === pathKind) paths.push(path)
     // Switch-style paths are numeric 0/1 on the wire; offer them for
@@ -62,7 +69,7 @@ async function fetchPaths(pathKind) {
       paths.push(path)
     }
   }
-  return [...new Set(paths)].sort()
+  return { paths: [...new Set(paths)].sort(), unitsByPath }
 }
 
 function fieldRow(id, label, control) {
@@ -104,13 +111,9 @@ function buildForm(widgetType, paths, state) {
     )
   }
   if (spec.fields.includes('convert')) {
-    const options = Object.entries(CONVERSIONS)
-      .map(
-        ([key, c]) =>
-          `<option value="${key}" ${state.convert === key ? 'selected' : ''}>${c.label}</option>`
-      )
-      .join('')
-    rows.push(fieldRow('convert', 'Conversion', `<select id="convert">${options}</select>`))
+    rows.push(
+      fieldRow('convert', 'Conversion', `<select id="convert"></select>`)
+    )
   }
   if (spec.fields.includes('min')) {
     rows.push(fieldRow('min', 'Minimum', `<input id="min" type="number" step="any" value="${state.min ?? 0}">`))
@@ -146,6 +149,29 @@ function readForm(widgetType) {
   return values
 }
 
+/**
+ * Repopulate the conversion select for the currently entered path: only
+ * conversions valid for the path's SK meta units are offered, and the
+ * default follows the host's preferred display units.
+ */
+function refreshConversionOptions(unitsByPath, prefs, savedPath, savedConvert) {
+  const select = document.getElementById('convert')
+  if (!select) return
+  const path = document.getElementById('path').value.trim()
+  const units = unitsByPath[path]
+  const valid = validConversions(units, Object.keys(CONVERSIONS))
+  const selected =
+    path === savedPath && savedConvert && valid.includes(savedConvert)
+      ? savedConvert
+      : defaultConversion(units, path, prefs)
+  select.innerHTML = valid
+    .map(
+      (key) =>
+        `<option value="${key}" ${key === selected ? 'selected' : ''}>${CONVERSIONS[key].label}</option>`
+    )
+    .join('')
+}
+
 async function main() {
   const root = document.getElementById('root')
   const client = await connectExtension()
@@ -153,9 +179,15 @@ async function main() {
   const spec = WIDGET_FIELDS[widgetType] ?? WIDGET_FIELDS.gauge
 
   root.innerHTML = '<p class="status">Loading Signal K paths…</p>'
-  const [paths, state] = await Promise.all([
-    fetchPaths(spec.pathKind).catch(() => []),
-    client.state.get()
+  const [{ paths, unitsByPath }, state, prefs] = await Promise.all([
+    fetchPaths(spec.pathKind).catch(() => ({ paths: [], unitsByPath: {} })),
+    client.state.get(),
+    client.hasCapability('units')
+      ? client
+          .call('units.get')
+          .then((r) => r.units)
+          .catch(() => null)
+      : Promise.resolve(null)
   ])
 
   root.innerHTML = `
@@ -166,6 +198,18 @@ async function main() {
       <button type="button" id="cancel">Cancel</button>
       <button type="button" id="save" class="primary">Save</button>
     </div>`
+
+  if (spec.fields.includes('convert')) {
+    const refresh = () =>
+      refreshConversionOptions(unitsByPath, prefs, state.path, state.convert)
+    refresh()
+    const pathInput = document.getElementById('path')
+    pathInput.addEventListener('change', refresh)
+    pathInput.addEventListener('input', () => {
+      // datalist picks fire 'input'; only react once the value is a known path
+      if (unitsByPath[pathInput.value.trim()] !== undefined) refresh()
+    })
+  }
 
   const status = document.getElementById('status')
   document.getElementById('save').addEventListener('click', async () => {

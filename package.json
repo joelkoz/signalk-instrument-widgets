@@ -10,7 +10,7 @@
   ],
   "scripts": {
     "build": "node scripts/build.mjs",
-    "test": "node --test \"test/**/*.test.js\""
+    "test": "node --test \"test/**/*.test.js\" \"test/**/*.test.mjs\""
   },
   "author": "Joel Kozikowski",
   "license": "MIT",
