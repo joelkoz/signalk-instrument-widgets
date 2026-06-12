@@ -5,11 +5,12 @@
   "main": "plugin/index.js",
   "keywords": [
     "signalk-node-server-plugin",
-    "signalk-category-utility"
+    "signalk-category-chart-plotters"
   ],
   "files": [
     "plugin",
     "public",
+    "docs/screenshots",
     "README.md",
     "LICENSE"
   ],
@@ -31,6 +32,17 @@
   "signalk-plugin-enabled-by-default": false,
   "signalk": {
     "displayName": "Instrument Widgets",
-    "appSupport": "none"
+    "appSupport": "none",
+    "screenshots": [
+      "./docs/screenshots/1_freeboard-widget.png"
+    ],
+    "appstore": {
+      "displayName": "Instrument Widgets",
+      "categories": [
+        "chart-plotters"
+      ],
+      "author": "Joel Kozikowski",
+      "description": "Gauge, meter and switch widgets for Signal K chartplotters that support the plotterExtensions resource type"
+    }
   }
 }
