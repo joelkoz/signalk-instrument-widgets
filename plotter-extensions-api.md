@@ -189,10 +189,12 @@ by the providing plugin.
 - `whileEnabled` — load while the extension is available, independent of
   visibility (the expected default for placed widgets).
 
-Panels are opened by toolbar buttons, by the host method `ui.openPanel`
-(e.g. a widget tap), or — for configuration panels — by
-`ui.openConfigPanel`. The reference host shows general panels in a
-right-side drawer and configuration panels in a dialog.
+Panels are opened by toolbar buttons, by the host methods `ui.openPanel` /
+`ui.togglePanel` (e.g. a widget tap), or — for configuration panels — by
+`ui.openConfigPanel` / `ui.toggleConfigPanel`. The `toggle*` variants close
+the panel if it is already the active one, otherwise open it. The reference
+host shows general panels in a right-side drawer that pushes the chart
+aside, and configuration panels in a dialog.
 
 ---
 
@@ -216,8 +218,10 @@ An extension may contribute buttons to host-defined UI slots:
 - `icon` — a Material icon name the host may render; hosts without that
   icon set may substitute a generic extension icon. (A generic `symbol`
   reference field is reserved for the symbols resource integration.)
-- `action` — `openPanel` (this version) opens the named panel from the same
-  manifest.
+- `action` — opens the named panel from the same manifest:
+  - `togglePanel` — open the panel, or close it if it is already the active
+    panel (recommended; matches the host's built-in panel-button behavior).
+  - `openPanel` — always open (or switch to) the panel.
 
 ---
 
@@ -290,7 +294,9 @@ contract** — any conforming implementation interoperates.
 | `map.center` | `{ position: [lon, lat], zoom? }` | `{}` |
 | `map.fitBounds` | `{ bounds: [minLon, minLat, maxLon, maxLat] }` | `{}` |
 | `ui.openPanel` | `{ panel }` | `{}` |
+| `ui.togglePanel` | `{ panel }` | `{}` |
 | `ui.openConfigPanel` | — (widget contexts) | `{}` |
+| `ui.toggleConfigPanel` | — (widget contexts) | `{}` |
 | `ui.closePanel` | — (panel contexts) | `{}` |
 
 **Host events**
