@@ -43,7 +43,7 @@ export function formatValue(value, decimals = 1) {
   return value.toFixed(decimals)
 }
 
-const LONG_PRESS_MS = 600
+const LONG_PRESS_MS = 1500
 
 function installLongPress(client) {
   let timer = null
