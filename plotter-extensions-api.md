@@ -24,12 +24,12 @@ the existing Signal K plugin/app-store flow.
 ```
 
 > **Status: draft.** This document describes extension API version `1` as
-> implemented by the reference host (Freeboard-SK) and reference extension
-> (`signalk-instrument-widgets`): the **widget surface** — widgets,
-> configuration panels, state storage, Signal K data relay, and unit
-> preferences. Further contribution types (buttons, background runtimes,
-> resource display filters, map/resource host APIs) are under development
-> and intentionally not specified here yet.
+> implemented by the reference host (Freeboard-SK) and the reference
+> extensions (`signalk-instrument-widgets`, `signalk-poi-search`): widgets,
+> panels, toolbar buttons, state storage, Signal K data relay, unit
+> preferences, resource display filters and map control. Background
+> runtimes and manifest-declared filter chains are under development and
+> intentionally not specified here yet.
 
 ---
 
@@ -101,8 +101,8 @@ extension id (the providing plugin's id is the recommended key):
   offered at all.
 - `optional` — capability ids the extension uses when present; absence must
   not prevent it from running.
-- Contribution sections: `widgets`, `panels` (this version). Hosts must
-  ignore unknown sections and fields.
+- Contribution sections: `widgets`, `panels`, `buttons` (this version).
+  Hosts must ignore unknown sections and fields.
 - Any individual contribution entry may declare its own `apiVersion` when
   it needs a newer host API than the manifest baseline; hosts silently omit
   contributions they cannot satisfy while keeping the rest.
@@ -113,9 +113,14 @@ extension id (the providing plugin's id is the recommended key):
 | --- | --- |
 | `widgets` | Host supports the widget grid described below (including the configuration-panel methods `ui.openConfigPanel` / `ui.closePanel`). |
 | `panels.iframe` | Host supports iframe panels. |
+| `buttons` | Host renders extension toolbar buttons in at least one slot. |
 | `signalk.stream` | Host streams Signal K path values to extension contexts over the message bus. |
 | `signalk.put` | Host relays Signal K PUT requests from extension contexts. |
 | `units` | Host exposes the user's preferred display units (`units.get`). |
+| `map` | Host implements the `map.*` methods (view query and control). |
+| `resources` | Host implements `resources.list` (relayed resource queries). |
+| `resources.filter` | Host implements imperative resource display filters. |
+| `ui` | Host implements `ui.openPanel` / `ui.closePanel`. |
 
 The vocabulary is open-ended: future versions add ids (buttons, resource
 filters, map control), and hosts may expose vendor-specific experiments
@@ -179,9 +184,40 @@ by the providing plugin.
 **Lifecycle values**
 
 - `onOpen` — load when opened, unload when closed.
-- `keepAlive` — load on first open, keep running while available.
+- `keepAlive` — load on first open, keep running (hidden) while available;
+  panel state survives close/reopen.
 - `whileEnabled` — load while the extension is available, independent of
   visibility (the expected default for placed widgets).
+
+Panels are opened by toolbar buttons, by the host method `ui.openPanel`
+(e.g. a widget tap), or — for configuration panels — by
+`ui.openConfigPanel`. The reference host shows general panels in a
+right-side drawer and configuration panels in a dialog.
+
+---
+
+## Buttons
+
+An extension may contribute buttons to host-defined UI slots:
+
+```json
+{
+  "id": "open-poi-search",
+  "title": "POI Search",
+  "slot": "mapToolbar",
+  "icon": "travel_explore",
+  "action": { "type": "openPanel", "panel": "poi-search-panel" }
+}
+```
+
+- `slot` — host-defined placement; `mapToolbar` is the one well-known slot
+  every host supporting `buttons` must map to a reasonable toolbar
+  location. Hosts fall back to a default slot for unknown values.
+- `icon` — a Material icon name the host may render; hosts without that
+  icon set may substitute a generic extension icon. (A generic `symbol`
+  reference field is reserved for the symbols resource integration.)
+- `action` — `openPanel` (this version) opens the named panel from the same
+  manifest.
 
 ---
 
@@ -210,7 +246,9 @@ inside a routing envelope over `postMessage`**:
   "host": "freeboard-sk",
   "hostVersion": "2.24.0",
   "apiVersion": "1",
-  "capabilities": ["widgets", "panels.iframe", "signalk.stream", "signalk.put", "units"],
+  "capabilities": ["widgets", "panels.iframe", "buttons", "signalk.stream",
+                   "signalk.put", "units", "map", "resources",
+                   "resources.filter", "ui"],
   "context": {
     "kind": "widget",
     "id": "gauge",
@@ -245,6 +283,13 @@ contract** — any conforming implementation interoperates.
 | `signalk.unsubscribe` | `{ subscriptionId }` | `{}` |
 | `signalk.put` | `{ path, value }` | server PUT response |
 | `units.get` | — | `{ units }` |
+| `resources.list` | `{ type, query? }` | resource collection |
+| `resources.setFilter` | `{ type, filter }` | `{}` |
+| `resources.clearFilter` | `{ type }` | `{}` |
+| `map.getView` | — | `{ center, zoom, bounds }` |
+| `map.center` | `{ position: [lon, lat], zoom? }` | `{}` |
+| `map.fitBounds` | `{ bounds: [minLon, minLat, maxLon, maxLat] }` | `{}` |
+| `ui.openPanel` | `{ panel }` | `{}` |
 | `ui.openConfigPanel` | — (widget contexts) | `{}` |
 | `ui.closePanel` | — (panel contexts) | `{}` |
 
@@ -256,6 +301,46 @@ contract** — any conforming implementation interoperates.
 - `sk.<path>` — `{ path, value, timestamp, $source }`: a subscribed
   Signal K path value, relayed over the host's multiplexed server
   connection (one upstream connection per host, not per widget).
+- `filters.changed` — `{ type }`: the extension's display filter for a
+  resource type was set or cleared.
+
+### Resource queries and display filters
+
+`resources.list` relays a resource collection request through the host's
+authenticated client: `{ type: "notes", query: { position: [lon, lat],
+distance: 18520 } }` serializes to the resources API query string. This
+keeps extensions inside the host's auth/session semantics; extensions may
+still call the server REST API directly (same-origin) when needed.
+
+`resources.setFilter` controls what the host *displays* for a resource
+type — it never modifies stored resources:
+
+```json
+{
+  "type": "notes",
+  "filter": {
+    "mode": "include",
+    "ids": ["urn:mrn:signalk:uuid:..."],
+    "match": [ { "path": "properties.skIcon", "op": "eq", "value": "anchorage" } ],
+    "label": "Anchorage < 10 nm: 2 matches"
+  }
+}
+```
+
+- `mode` — `include` (show only matching) or `exclude` (hide matching).
+- `ids` — resource ids; `match` — AND-combined property conditions with
+  `op` one of `eq | ne | lt | lte | gt | gte | in | contains | exists`
+  (`contains` is case-insensitive substring for strings, membership for
+  arrays; conditions on missing fields are false except `exists`). At
+  least one of `ids`/`match` is required; when both are present a resource
+  must satisfy both.
+- `label` — short human-readable description. **Hosts must surface active
+  filters to the user** (the reference host renders clearable chips) and
+  let the user clear any filter without opening the owning extension.
+
+The host tracks at most one filter per (extension, resource type); a new
+`setFilter` replaces it. Filters from multiple extensions compose by
+intersection. Filters are not persisted across host reloads.
 
 ### State storage
 
@@ -347,18 +432,21 @@ adversarial boundary**:
 - **Protocol**: [`signalk-plotterext-bus`](https://github.com/joelkoz/signalk-plotterext-bus)
   — wire format documentation plus host/extension endpoints with a
   conformance test suite.
-- **Extension**: [`signalk-instrument-widgets`](https://github.com/joelkoz/signalk-instrument-widgets)
+- **Extensions**: [`signalk-instrument-widgets`](https://github.com/joelkoz/signalk-instrument-widgets)
   (this repository) — gauge, meter, switch and display-value widgets with a
-  shared unit-aware configuration panel.
+  shared unit-aware configuration panel — and
+  [`signalk-poi-search`](https://github.com/joelkoz/signalk-poi-search) — a
+  toolbar button + keepAlive search panel + results widget exercising
+  resource queries, display filters and map control.
 - **Host**: Freeboard-SK (feature branch, in development) — anchor-area
-  widget overlay, placement UI, state storage, multiplexed Signal K relay.
+  widget overlay, placement UI, state storage, multiplexed Signal K relay,
+  toolbar buttons, panel drawer, filter chips, map control.
 
 ---
 
 ## Planned (not part of this version)
 
-The working draft of the broader specification also defines toolbar
-buttons, background runtimes, resource display filtering (id-set and
-property-predicate forms), map control (`map.*`) and resource host APIs
-(`resources.*`). These will be added to this document as their reference
-implementations land.
+The working draft of the broader specification also defines background
+runtimes (headless extension contexts) and manifest-declared declarative
+filter chains evaluated on every resource fetch. These will be added to
+this document as their reference implementations land.
