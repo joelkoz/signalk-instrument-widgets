@@ -37,10 +37,10 @@ src/web/    Widget/panel browser source (plain JS modules + CSS).
             loading, value conversion, long-press gesture.
 scripts/    build.mjs — esbuild bundles src/web -> public/ and generates
             the HTML pages.
-public/     Built web assets, committed. Served by the Signal K server at
-            /signalk-instrument-widgets/ via the standard signalk-webapp
-            mechanism. Generated — do not hand-edit; edit src/web and
-            rebuild.
+public/     Built web assets, committed. Served by the plugin as a top-level
+            static route at /plotterext/signalk-instrument-widgets/ (not a
+            signalk-webapp, so absent from the Webapps launcher). Generated —
+            do not hand-edit; edit src/web and rebuild.
 test/       node --test suites for the plugin contract.
 ```
 
@@ -60,10 +60,15 @@ the built-in demo switch path covers the switch widget anywhere.
 
 ## Engineering rules
 
-- **Serve assets only through the `signalk-webapp` mechanism** (`public/`
-  at `/signalk-instrument-widgets/`). Never serve UI through
-  `registerWithRouter()` routes — the server gates all `/plugins/*` routes
-  behind admin authentication, which breaks read-only users.
+- **Serve UI assets from a public top-level static route, not from
+  `/plugins/*`.** The plugin mounts `public/` itself with
+  `app.use('/plotterext/signalk-instrument-widgets', require('express').static(PUBLIC_DIR))`.
+  Do **not** use `registerWithRouter()` / `/plugins/*` for UI — those are
+  admin-gated and break read-only users. Do **not** re-add the
+  `signalk-webapp` keyword: it would list this plugin in the server's Webapps
+  launcher, but these pages are only ever loaded inside a host iframe, never
+  launched standalone. (Express is provided by the server, so requiring it
+  adds no runtime dependency of our own.)
 - **The resource provider stays read-only.** `setResource`/`deleteResource`
   must reject. The manifest is code, not user data.
 - **No server-side runtime dependencies.** The bus client is bundled into

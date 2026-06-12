@@ -6,12 +6,20 @@
 // (optionally) provides a demo switch path with a PUT handler so the switch
 // widget can be exercised against playback data that has no real switches.
 //
-// The widget/panel web assets live in public/ and are served by the Signal K
-// server at /signalk-instrument-widgets/ through the standard signalk-webapp
-// mechanism (public, not admin-gated like /plugins/*).
+// The widget/panel web assets live in public/ and are served by the plugin
+// itself, mounted as a top-level Express static route at
+// /plotterext/<package-name>/. This is a public route (no token required,
+// same as the old signalk-webapp mechanism) but, unlike a signalk-webapp, it
+// does NOT appear in the server's Webapps launcher — these assets are only
+// ever loaded inside a host chartplotter's iframe, never launched directly.
+// It is deliberately NOT a /plugins/* route: those are admin-gated, which
+// would break read-only users.
+
+const path = require('path')
 
 const PLUGIN_ID = 'signalk-instrument-widgets'
-const ASSET_BASE = `/${PLUGIN_ID}`
+const ASSET_BASE = `/plotterext/${PLUGIN_ID}`
+const PUBLIC_DIR = path.join(__dirname, '..', 'public')
 const DEMO_SWITCH_PATH = 'electrical.switches.demo.state'
 
 const pkg = require('../package.json')
@@ -77,10 +85,29 @@ function buildManifest() {
 
 module.exports = (app) => {
   let providerRegistered = false
+  let assetsMounted = false
   let demoSwitchState = 0
   let running = false
 
   const debug = (msg) => app.debug(`${PLUGIN_ID}: ${msg}`)
+
+  // Serve public/ as a top-level static route. Express is provided by the
+  // Signal K server, so requiring it adds no runtime dependency of our own.
+  // Guarded so the test harness (a fake app with no .use) is a no-op.
+  const mountAssets = () => {
+    if (assetsMounted) return
+    if (typeof app.use !== 'function') return
+    let serveStatic
+    try {
+      serveStatic = require('express').static
+    } catch {
+      app.error(`${PLUGIN_ID}: express unavailable; cannot serve ${ASSET_BASE}`)
+      return
+    }
+    app.use(ASSET_BASE, serveStatic(PUBLIC_DIR))
+    assetsMounted = true
+    debug(`assets served at ${ASSET_BASE}`)
+  }
 
   const registerProvider = () => {
     if (providerRegistered) return
@@ -158,6 +185,7 @@ module.exports = (app) => {
 
     start(options) {
       running = true
+      mountAssets()
       registerProvider()
       if (!options || options.enableDemoSwitch !== false) {
         startDemoSwitch()

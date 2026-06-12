@@ -41,7 +41,7 @@ test('registers a read-only plotterExtensions provider with a valid manifest', a
   for (const widget of manifest.widgets) {
     assert.match(widget.size, /^[12]x[12]$/)
     assert.strictEqual(widget.type, 'iframe')
-    assert.ok(widget.url.startsWith('/signalk-instrument-widgets/'))
+    assert.ok(widget.url.startsWith('/plotterext/signalk-instrument-widgets/'))
     assert.strictEqual(widget.configPanel, 'instrument-config')
   }
   assert.strictEqual(manifest.panels[0].id, 'instrument-config')

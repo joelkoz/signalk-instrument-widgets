@@ -24,8 +24,9 @@ the plugin id `signalk-instrument-widgets`:
   - `switch` — size `1x1`
   - `display` — size `1x1`
 - One panel: `instrument-config`, `type: "iframe"`, `lifecycle: "onOpen"`.
-- All asset URLs are server-relative under `/signalk-instrument-widgets/`
-  (hosts resolve them against the Signal K server origin).
+- All asset URLs are server-relative under
+  `/plotterext/signalk-instrument-widgets/` (hosts resolve them against the
+  Signal K server origin).
 
 `listResources` returns `{}` and `getResource` rejects while the plugin is
 stopped. `setResource`/`deleteResource` always reject.
@@ -124,10 +125,14 @@ Playback/demo servers rarely have writable switch paths, so by default
 
 ## 6. Serving and packaging
 
-- Web assets are built into `public/` and served by the Signal K server at
-  `/signalk-instrument-widgets/` via the `signalk-webapp` package keyword —
-  publicly readable, independent of admin auth. `/plugins/*` routes must
-  not be used for any UI asset.
+- Web assets are built into `public/` and served by the plugin itself as a
+  top-level Express static route at `/plotterext/signalk-instrument-widgets/`
+  (`app.use(ASSET_BASE, require('express').static(PUBLIC_DIR))`) — publicly
+  readable, independent of admin auth. The plugin is deliberately **not** a
+  `signalk-webapp` (the keyword is omitted) so it stays out of the server's
+  Webapps launcher; these assets only ever load inside a host iframe.
+  `/plugins/*` routes must not be used for any UI asset — they are admin-gated
+  and would break read-only users.
 - `public/` is committed (the published package must work without a build
   step on the server).
 - The plugin entry is dependency-free CommonJS; the bus client is bundled

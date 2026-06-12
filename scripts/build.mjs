@@ -1,5 +1,5 @@
-// Build the widget/panel web assets into public/, which the Signal K server
-// serves at /signalk-instrument-widgets/ (signalk-webapp mechanism).
+// Build the widget/panel web assets into public/, which the plugin serves as
+// a top-level static route at /plotterext/signalk-instrument-widgets/.
 
 import { build } from 'esbuild'
 import { cpSync, mkdirSync, writeFileSync } from 'node:fs'

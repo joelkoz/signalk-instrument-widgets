@@ -5,7 +5,6 @@
   "main": "plugin/index.js",
   "keywords": [
     "signalk-node-server-plugin",
-    "signalk-webapp",
     "signalk-category-utility"
   ],
   "files": [

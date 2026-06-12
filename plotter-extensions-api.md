@@ -73,7 +73,7 @@ extension id (the providing plugin's id is the recommended key):
         "id": "gauge",
         "title": "Gauge",
         "type": "iframe",
-        "url": "/signalk-instrument-widgets/gauge.html",
+        "url": "/plotterext/signalk-instrument-widgets/gauge.html",
         "size": "1x1",
         "configPanel": "instrument-config",
         "lifecycle": "whileEnabled"
@@ -84,7 +84,7 @@ extension id (the providing plugin's id is the recommended key):
         "id": "instrument-config",
         "title": "Instrument Setup",
         "type": "iframe",
-        "url": "/signalk-instrument-widgets/config.html",
+        "url": "/plotterext/signalk-instrument-widgets/config.html",
         "lifecycle": "onOpen"
       }
     ]
@@ -216,7 +216,7 @@ with no UI — declared in a `background` manifest section and gated by the
       "id": "search-service",
       "title": "POI Search Service",
       "type": "iframe",
-      "url": "/signalk-poi-search/runtime.html"
+      "url": "/plotterext/signalk-poi-search/runtime.html"
     }
   ]
 }
@@ -518,12 +518,38 @@ A Signal K plugin:
    })
    ```
 
-2. Serves its widget/panel assets from a **publicly readable** route. The
-   server gates all `/plugins/*` routes behind admin authentication, so use
-   the standard `signalk-webapp` mechanism (`public/` served at
-   `/<package-name>/`) or another route outside `/plugins`. Manifest URLs
-   are server-relative; hosts resolve them against the Signal K server
-   origin.
+2. Serves its widget/panel assets from a **publicly readable** route that it
+   mounts itself. The `app` object handed to a plugin is the Express
+   instance, so mount the asset directory as a top-level static route:
+
+   ```js
+   const ASSET_BASE = `/plotterext/${PLUGIN_ID}`
+   app.use(ASSET_BASE, require('express').static(PUBLIC_DIR))
+   // manifest widget/panel/background urls then point at `${ASSET_BASE}/...`
+   ```
+
+   Manifest URLs are server-relative; hosts resolve them against the Signal K
+   server origin. Two routes to **avoid**:
+
+   - **`/plugins/*`** (e.g. `registerWithRouter`) — the server gates the
+     entire `/plugins` path behind *admin* authentication, so read-only users
+     could not load the assets.
+   - **The `signalk-webapp` keyword** — it would serve `public/` at
+     `/<package-name>/`, but it also lists the package in the server's Webapps
+     launcher. Extension assets are only ever loaded inside the host's iframe,
+     never launched standalone, so they should not appear there. Omit the
+     keyword and self-mount instead.
+
+   A namespaced prefix such as `/plotterext/<package-name>/` keeps the
+   top-level path collision-free. (Express is provided by the server, so
+   requiring it adds no runtime dependency.)
+
+   Note that asset *bytes* being public is not a data-exposure concern: the
+   files are inert UI code, and all data flows through the bus, which the host
+   brokers using the logged-in user's own authenticated server connection.
+   Extension *discovery* is already gated — the manifest list is read through
+   the authenticated resources API, so an unauthenticated user sees no
+   extensions regardless of how the assets are served.
 
 3. Declares inter-plugin relationships through the App Store mechanism
    (`"signalk": { "recommends": ["<plugin-name>"] }` in `package.json`)
