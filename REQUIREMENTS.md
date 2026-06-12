@@ -1,8 +1,8 @@
 # Requirements: signalk-instrument-widgets
 
 The authoritative implementation spec for this plugin. It assumes the
-Signal K plotter extension specification (the `plotterExtensions` resource
-type and host contract, proposed to `SignalK/signalk-server` under
+Signal K plotter extension specification (`plotter-extensions-api.md` in
+this repository, destined for `SignalK/signalk-server`
 `docs/develop/rest-api/proposed/`) and the `signalk-plotterext-bus` wire
 protocol as context.
 

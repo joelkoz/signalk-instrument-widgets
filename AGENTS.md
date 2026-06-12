@@ -5,14 +5,19 @@ Before changing or debugging this repository, read:
 1. `README.md` — end-user documentation: what the widgets do and how users
    configure them. Keep it user-facing; developer material belongs here and
    in `REQUIREMENTS.md`.
-2. `REQUIREMENTS.md` — the authoritative implementation spec: manifest
-   contract, widget behavior, state schema, serving rules, test plan.
+2. `plotter-extensions-api.md` — the Plotter Extensions API specification
+   (draft). This repository hosts the spec document until it is submitted
+   upstream to `SignalK/signalk-server` (`docs/develop/rest-api/proposed/`).
+   Keep it in sync with implemented behavior.
+3. `REQUIREMENTS.md` — the authoritative implementation spec for this
+   plugin: manifest contract, widget behavior, state schema, serving rules,
+   test plan.
 
 ## What this plugin is
 
 The first reference extension for the Signal K **plotter extension**
-mechanism (the `plotterExtensions` resource type, proposed to the
-`SignalK/signalk-server` project under `docs/develop/rest-api/proposed/`).
+mechanism (the `plotterExtensions` resource type — see
+`plotter-extensions-api.md` in this repository).
 It exists both as a useful end-user feature (single-value instrument
 widgets for chartplotters) and as the example future extension authors will
 copy. Code clarity matters more than cleverness here.
