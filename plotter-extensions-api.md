@@ -159,12 +159,16 @@ two instances of the same widget are configured independently.
 via `configPanel`. Pointer events inside a sandboxed iframe are invisible
 to the host, so the press-and-hold gesture is detected by the widget
 content itself (the reference client library implements it), which calls
-the host method `ui.openConfigPanel`. The host opens the named panel with
-`context.targetInstance` set to the widget's instance id and
-`context.targetWidget` set to the widget's manifest-local id, and must also
-provide a gesture-independent path to the same panel plus an affordance to
-**remove** the widget instance (the reference host places a Remove button
-in the configuration dialog).
+the host method `ui.openConfigPanel` or `ui.toggleConfigPanel`. The host
+opens the named panel with `context.targetInstance` set to the widget's
+instance id and `context.targetWidget` set to the widget's manifest-local
+id, and must also provide a gesture-independent path to the same panel plus
+an affordance to **remove** the widget instance (the reference host places a
+Remove button in the configuration dialog). A widget that also handles a
+short tap should distinguish it from a long press so the press-and-hold does
+not trigger the tap action. A widget with **no** `configPanel` still gets a
+configuration dialog on long-press so it can be removed (the reference host
+shows a remove-only dialog).
 
 **Widget fields:** `id`, `title`, `type` (`iframe`), `url`, `size`,
 `configPanel?`, `lifecycle?`, `apiVersion?`.
