@@ -27,9 +27,9 @@ the existing Signal K plugin/app-store flow.
 > implemented by the reference host (Freeboard-SK) and the reference
 > extensions (`signalk-instrument-widgets`, `signalk-poi-search`): widgets,
 > panels, toolbar buttons, state storage, Signal K data relay, unit
-> preferences, resource display filters and map control. Background
-> runtimes and manifest-declared filter chains are under development and
-> intentionally not specified here yet.
+> preferences, resource display filters, map control and headless
+> background runtimes. Manifest-declared declarative filter chains are under
+> development and intentionally not specified here yet.
 
 ---
 
@@ -101,8 +101,8 @@ extension id (the providing plugin's id is the recommended key):
   offered at all.
 - `optional` — capability ids the extension uses when present; absence must
   not prevent it from running.
-- Contribution sections: `widgets`, `panels`, `buttons` (this version).
-  Hosts must ignore unknown sections and fields.
+- Contribution sections: `widgets`, `panels`, `buttons`, `background` (this
+  version). Hosts must ignore unknown sections and fields.
 - Any individual contribution entry may declare its own `apiVersion` when
   it needs a newer host API than the manifest baseline; hosts silently omit
   contributions they cannot satisfy while keeping the rest.
@@ -113,6 +113,7 @@ extension id (the providing plugin's id is the recommended key):
 | --- | --- |
 | `widgets` | Host supports the widget grid described below (including the configuration-panel methods `ui.openConfigPanel` / `ui.closePanel`). |
 | `panels.iframe` | Host supports iframe panels. |
+| `background.iframe` | Host supports headless background-runtime iframes (no UI, loaded while the extension is present). |
 | `buttons` | Host renders extension toolbar buttons in at least one slot. |
 | `signalk.stream` | Host streams Signal K path values to extension contexts over the message bus. |
 | `signalk.put` | Host relays Signal K PUT requests from extension contexts. |
@@ -202,6 +203,61 @@ aside, and configuration panels in a dialog.
 
 ---
 
+## Background Runtimes
+
+A background runtime is a **headless** extension context — a hidden iframe
+with no UI — declared in a `background` manifest section and gated by the
+`background.iframe` capability:
+
+```json
+{
+  "background": [
+    {
+      "id": "search-service",
+      "title": "POI Search Service",
+      "type": "iframe",
+      "url": "/signalk-poi-search/runtime.html"
+    }
+  ]
+}
+```
+
+The host loads one iframe per declared runtime **while the extension is
+present in the collection** (i.e. its providing plugin is enabled) and tears
+it down when the extension leaves — independent of any panel or widget being
+open. This is the distinction from a `keepAlive` panel: a kept-alive panel is
+a *visible* context that had to be opened at least once, whereas a runtime
+runs from the moment the extension is available with no user interaction. A
+host that supports `background.iframe` **must not** keep a visible panel
+alive merely to give an extension background behavior — that is what runtimes
+are for.
+
+A runtime speaks the same bus protocol as widgets and panels; its handshake
+`context.kind` is `background`. It may call the host API — `state.*`
+(extension scope by default, as it has no widget instance), `signalk.*`,
+`resources.*` including `resources.setFilter`, `units.get`, `map.*`, and
+`ui.openPanel`/`ui.togglePanel`. It has no `ui.closePanel` or
+`ui.*ConfigPanel` (those are panel/widget affordances). The typical use is a
+client-side service that holds session state and keeps work alive so a panel
+can **close itself** (`ui.closePanel`) without losing that state, then
+reattach to the runtime's state when reopened.
+
+`whileEnabled` is the only meaningful lifecycle for a runtime and is implied;
+the host does not unload a runtime on its own while the extension is present.
+
+To **trigger** a runtime, the runtime subscribes to a topic with
+`events.subscribe` and a `sendMessage` button (see Buttons) publishes that
+topic — fire-and-forget, the direction this version supports.
+
+**Background fields:** `id`, `title?`, `type` (`iframe`), `url`,
+`lifecycle?`, `apiVersion?`.
+
+> Runtimes a host can *call into* from a button or a declarative filter (the
+> `callRuntime` action) are a further step not part of this version; a
+> version-1 runtime drives the host, not the other way around.
+
+---
+
 ## Buttons
 
 An extension may contribute buttons to host-defined UI slots:
@@ -222,10 +278,41 @@ An extension may contribute buttons to host-defined UI slots:
 - `icon` — a Material icon name the host may render; hosts without that
   icon set may substitute a generic extension icon. (A generic `symbol`
   reference field is reserved for the symbols resource integration.)
-- `action` — opens the named panel from the same manifest:
-  - `togglePanel` — open the panel, or close it if it is already the active
-    panel (recommended; matches the host's built-in panel-button behavior).
-  - `openPanel` — always open (or switch to) the panel.
+- `action` — what the button does:
+  - `togglePanel` — open the named `panel` from the same manifest, or close
+    it if it is already the active panel (recommended; matches the host's
+    built-in panel-button behavior).
+  - `openPanel` — always open (or switch to) the named `panel`.
+  - `sendMessage` — publish a message onto the host bus. The button carries a
+    `topic` (the event name) and optional `params`; the host publishes it as
+    a bus event delivered to every live extension context that subscribed to
+    that topic via `events.subscribe`. This is fire-and-forget — no reply.
+
+    ```json
+    {
+      "id": "refresh-pois",
+      "title": "Refresh nearby POIs",
+      "slot": "mapToolbar",
+      "icon": "refresh",
+      "action": { "type": "sendMessage", "topic": "poi-search:refresh" }
+    }
+    ```
+
+    The **primary use case is to reach the extension's own background
+    runtime** — a button poke that a kept-alive headless context handles
+    (re-run a search, recompute a filter, etc.), with any visible result
+    flowing back through the normal event loop (`state.changed`,
+    `filters.changed`, …). But it is a general message: the host delivers a
+    topic to *any* subscribed context, so it can also drive a panel or, across
+    extensions, let a federation of plugins coordinate and even build ad-hoc
+    service discovery over nothing but this messaging infrastructure.
+
+    Delivery is subscription-gated — a context receives a topic only if it
+    subscribed — so an unheard message simply does nothing. Topics **should**
+    be namespaced (e.g. `<extension-id>:<name>` or an `ext.*` prefix) to avoid
+    colliding with host events (`state.changed`, `sk.*`, `filters.changed`) or
+    with another extension's topics. This is a **convention, not an enforced
+    requirement**; the host does not validate topic names.
 
 ---
 
@@ -256,7 +343,7 @@ inside a routing envelope over `postMessage`**:
   "apiVersion": "1",
   "capabilities": ["widgets", "panels.iframe", "buttons", "signalk.stream",
                    "signalk.put", "units", "map", "resources",
-                   "resources.filter", "ui"],
+                   "resources.filter", "background.iframe", "ui"],
   "context": {
     "kind": "widget",
     "id": "gauge",
@@ -267,9 +354,9 @@ inside a routing envelope over `postMessage`**:
 }
 ```
 
-`context.kind` is `widget` or `panel` (this version). For a configuration
-panel, `targetInstance`/`targetWidget` identify the widget being
-configured.
+`context.kind` is `widget`, `panel` or `background` (this version). For a
+configuration panel, `targetInstance`/`targetWidget` identify the widget
+being configured; a `background` runtime carries neither.
 
 The reference implementation of both sides of this protocol is the
 [`signalk-plotterext-bus`](https://github.com/joelkoz/signalk-plotterext-bus)
@@ -350,12 +437,28 @@ type — it never modifies stored resources:
 ```
 
 - `mode` — `include` (show only matching) or `exclude` (hide matching).
-- `ids` — resource ids; `match` — AND-combined property conditions with
-  `op` one of `eq | ne | lt | lte | gt | gte | in | contains | exists`
-  (`contains` is case-insensitive substring for strings, membership for
-  arrays; conditions on missing fields are false except `exists`). At
-  least one of `ids`/`match` is required; when both are present a resource
-  must satisfy both.
+- `ids` — resource ids;
+- `match` — AND-combined property conditions with
+  `op` one of `eq | ne | lt | lte | gt | gte | in | contains | regex |
+  exists`. `contains` is case-insensitive substring for strings, membership
+  for arrays; `regex` tests a JavaScript regular-expression pattern string
+  (in `value`) against the field's string value — a non-string field or an
+  invalid pattern fails. Conditions on missing fields are false except
+  `exists`. At least one of `ids`/`match` is required; when both are present
+  a resource must satisfy both.
+
+  **Symbol-reference tolerance.** `eq`, `ne` and `in` compare symbol
+  references (per the [Symbols API](https://github.com/joelkoz/signalk-symbol-manager))
+  namespace-tolerantly: a bare local id matches a qualified `namespace:id`
+  with the same id, and vice versa. So `{ "path": "properties.skIcon",
+  "op": "eq", "value": "anchorage" }` matches a resource whose stored value
+  the host has qualified to `default:anchorage` (or `custom:anchorage`).
+  Differing namespaces (`custom:x` vs `fsk:x`) do not match, and only
+  single-colon `namespace:id` values participate — multi-colon strings such
+  as URNs keep strict equality. An extension that needs exact matching of a
+  qualified reference should set `"exact": true` on the condition (or write
+  the fully-qualified `value`, or use `regex`). With `exact`, `eq`/`ne`/`in`
+  compare strictly and `anchorage` will not match `default:anchorage`.
 - `label` — short human-readable description. **Hosts must surface active
   filters to the user** (the reference host renders clearable chips) and
   let the user clear any filter without opening the owning extension.
@@ -468,7 +571,20 @@ adversarial boundary**:
 
 ## Planned (not part of this version)
 
-The working draft of the broader specification also defines background
-runtimes (headless extension contexts) and manifest-declared declarative
-filter chains evaluated on every resource fetch. These will be added to
-this document as their reference implementations land.
+The working draft of the broader specification also defines
+**manifest-declared `postFetch` filter chains** — distinct from a feature
+this version already ships, so the distinction is spelled out:
+
+These are display filters declared *statically in the manifest* (not pushed
+at runtime), evaluated by the host on every resource fetch as a
+`priority`-ordered chain. This is **not** the same as the imperative
+`resources.setFilter` this version ships, where running extension code pushes
+an id set or `match` predicate. A declared entry is either a `match`
+predicate (which reuses the same Property Predicate language as
+`resources.setFilter`, so the predicate evaluator is shared) or one backed by
+a **background runtime** addressed through `callRuntime` — the host-into-
+runtime call direction, which this version's headless runtimes (they drive
+the host, not vice versa) do not yet implement. The predicate-only form can
+land independently; the runtime-backed form depends on `callRuntime`.
+
+This will be added to this document as its reference implementation lands.
