@@ -305,14 +305,26 @@ contract** — any conforming implementation interoperates.
 
 **Host events**
 
+These events are part of the API contract — any conforming host emits them,
+they are not host-specific. Each is delivered only to contexts that have
+subscribed to its name via `events.subscribe` (so a context that never
+subscribes pays nothing). A host emits an event when the corresponding
+capability is supported: `state.changed` always; `sk.<path>` with
+`signalk.stream`; `filters.changed` with `resources.filter`. The
+connection-level notifications `bus.ready` and `bus.handshake` (see
+Connection establishment) are the only other host/extension events and are
+handled by the protocol layer, not subscribed to.
+
 - `state.changed` — `{ scope, instanceId, keys }`: the extension's stored
   state changed (e.g. its configuration panel saved). Published to the
   extension's subscribed contexts.
 - `sk.<path>` — `{ path, value, timestamp, $source }`: a subscribed
   Signal K path value, relayed over the host's multiplexed server
   connection (one upstream connection per host, not per widget).
-- `filters.changed` — `{ type }`: the extension's display filter for a
-  resource type was set or cleared.
+- `filters.changed` — `{ type, active }`: the extension's display filter for
+  a resource type was set (`active: true`) or cleared (`active: false`, e.g.
+  the user dismissed the host's filter chip). Extensions should reflect a
+  clear in their own UI/state.
 
 ### Resource queries and display filters
 
