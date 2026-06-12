@@ -1,52 +1,31 @@
 # signalk-instrument-widgets
 
-Reference extension for the Signal K **plotterExtensions** specification.
-Provides three single-value instrument widgets for chartplotters that
-implement the plotter extension host contract (first reference host:
-Freeboard-SK):
+Add live instrument widgets to your chartplotter. Works with any chartplotter
+that supports Signal K plotter extensions (such as Freeboard-SK).
 
-- **Gauge** (1x1) — a dial for any numeric Signal K path.
-- **Meter** (2x1) — a 0–100% bar for ratio-style paths.
-- **Switch** (1x1) — displays a boolean/0-1 path; tap to actuate via PUT.
-- **Display Value** (1x1) — centered text readout: small top label, large
-  live value in the middle, larger bottom label (blank labels are hidden) —
-  e.g. "Speed over ground" / value / "SOG".
+- **Gauge** — a dial for any numeric value.
+- **Meter** — a 0–100% bar for ratio-style values.
+- **Switch** — shows an on/off value; tap to toggle it.
+- **Display Value** — a clean text readout: a small label on top, the live
+  value large in the middle, and an abbreviation below — e.g. "Speed over
+  ground" / value / "SOG".
 
-In the chartplotter, press and hold an **empty** widget area to add a widget
-(its setup panel opens automatically), and press and hold a **placed**
-widget to reconfigure it. Each placed instance is configured independently —
-pick a Signal K path with optional unit conversion, range and labels — so
-two gauges can show two different values. Configuration is stored per
-instance through the host's state API, and the setup panel includes a
-host-provided button to remove the widget.
+## Using the widgets
 
-## How it works
+In your chartplotter, press and hold an **empty** widget area to add a
+widget — its setup panel opens automatically. Press and hold a **placed**
+widget to reconfigure or remove it.
 
-- The plugin registers a read-only resource provider for the custom resource
-  type `plotterExtensions`; the single resource is this extension's manifest
-  (widgets + config panel + capability requirements).
-- The widget/panel pages in `public/` are served by the Signal K server at
-  `/signalk-instrument-widgets/` (standard `signalk-webapp` mechanism, not
-  admin-gated).
-- Widgets talk to the host chartplotter over the
-  [`signalk-plotterext-bus`](https://github.com/joelkoz/signalk-plotterext-bus)
-  protocol (JSON-RPC 2.0 over postMessage): `signalk.stream` for live values,
-  `signalk.put` for the switch, `state.*` for per-instance configuration.
+Each widget is configured on its own: pick the value to show, choose the
+units, and set the range and labels. So you can place two gauges showing two
+different values side by side. Your settings are remembered for each widget.
 
 ## Demo switch
 
-Playback/demo servers usually have no writable switch paths. By default the
-plugin registers a PUT handler for `electrical.switches.demo.state` and emits
-it as a delta, so the switch widget is testable anywhere. Disable in the
+If your server has no real switches to control (for example a demo or
+playback setup), the plugin can provide a demo switch so you can try the
+Switch widget anywhere. It is on by default and can be turned off in the
 plugin settings.
-
-## Development
-
-```sh
-npm install
-npm run build    # bundles src/web -> public/
-npm test         # plugin contract tests (node --test)
-```
 
 ## License
 
