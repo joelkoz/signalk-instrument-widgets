@@ -12,6 +12,7 @@
     "public",
     "docs/screenshots",
     "README.md",
+    "CHANGELOG.md",
     "LICENSE"
   ],
   "scripts": {
@@ -27,7 +28,7 @@
   },
   "devDependencies": {
     "esbuild": "^0.27.0",
-    "signalk-plotterext-bus": "file:../signalk-plotterext-bus"
+    "signalk-plotterext-bus": "^0.5.0"
   },
   "signalk-plugin-enabled-by-default": false,
   "signalk": {
