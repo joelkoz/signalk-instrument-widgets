@@ -28,8 +28,8 @@ the existing Signal K plugin/app-store flow.
 > extensions (`signalk-instrument-widgets`, `signalk-poi-search`): widgets,
 > panels, toolbar buttons, state storage, Signal K data relay, unit
 > preferences, resource display filters, map control and headless
-> background runtimes. Manifest-declared declarative filter chains are under
-> development and intentionally not specified here yet.
+> background runtimes. Manifest-declared filter chains and host-into-runtime
+> calls are out of scope for this version (see Non-Goals).
 
 ---
 
@@ -109,19 +109,19 @@ extension id (the providing plugin's id is the recommended key):
 
 **Capability identifiers (version 1)**
 
-| Capability | Meaning |
-| --- | --- |
-| `widgets` | Host supports the widget grid described below (including the configuration-panel methods `ui.openConfigPanel` / `ui.closePanel`). |
-| `panels.iframe` | Host supports iframe panels. |
-| `background.iframe` | Host supports headless background-runtime iframes (no UI, loaded while the extension is present). |
-| `buttons` | Host renders extension toolbar buttons in at least one slot. |
-| `signalk.stream` | Host streams Signal K path values to extension contexts over the message bus. |
-| `signalk.put` | Host relays Signal K PUT requests from extension contexts. |
-| `units` | Host exposes the user's preferred display units (`units.get`). |
-| `map` | Host implements the `map.*` methods (view query and control). |
-| `resources` | Host implements `resources.list` (relayed resource queries). |
-| `resources.filter` | Host implements imperative resource display filters. |
-| `ui` | Host implements `ui.openPanel` / `ui.closePanel`. |
+| Capability          | Meaning                                                                                                                           |
+| ------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
+| `widgets`           | Host supports the widget grid described below (including the configuration-panel methods `ui.openConfigPanel` / `ui.closePanel`). |
+| `panels.iframe`     | Host supports iframe panels.                                                                                                      |
+| `background.iframe` | Host supports headless background-runtime iframes (no UI, loaded while the extension is present).                                 |
+| `buttons`           | Host renders extension toolbar buttons in at least one slot.                                                                      |
+| `signalk.stream`    | Host streams Signal K path values to extension contexts over the message bus.                                                     |
+| `signalk.put`       | Host relays Signal K PUT requests from extension contexts.                                                                        |
+| `units`             | Host exposes the user's preferred display units (`units.get`).                                                                    |
+| `map`               | Host implements the `map.*` methods (view query and control).                                                                     |
+| `resources`         | Host implements `resources.list` (relayed resource queries).                                                                      |
+| `resources.filter`  | Host implements imperative resource display filters.                                                                              |
+| `ui`                | Host implements `ui.openPanel` / `ui.closePanel`.                                                                                 |
 
 The vocabulary is open-ended: future versions add ids (buttons, resource
 filters, map control), and hosts may expose vendor-specific experiments
@@ -135,7 +135,7 @@ are ignored; unknown ids in `requires` make the extension incompatible.
 A widget is a small, always-visible tile overlaid on the chart — for
 glanceable state, not complex interaction (interaction belongs in panels).
 
-**Layout model.** The host defines *widget areas* at fixed anchor positions
+**Layout model.** The host defines _widget areas_ at fixed anchor positions
 of the chartplotter window — typically corners and/or edge centers; the set
 is the host's choice (the reference host uses top-right, top-center,
 bottom-center, bottom-left and bottom-right, reserving top-left for its own
@@ -226,7 +226,7 @@ The host loads one iframe per declared runtime **while the extension is
 present in the collection** (i.e. its providing plugin is enabled) and tears
 it down when the extension leaves — independent of any panel or widget being
 open. This is the distinction from a `keepAlive` panel: a kept-alive panel is
-a *visible* context that had to be opened at least once, whereas a runtime
+a _visible_ context that had to be opened at least once, whereas a runtime
 runs from the moment the extension is available with no user interaction. A
 host that supports `background.iframe` **must not** keep a visible panel
 alive merely to give an extension background behavior — that is what runtimes
@@ -252,7 +252,7 @@ topic — fire-and-forget, the direction this version supports.
 **Background fields:** `id`, `title?`, `type` (`iframe`), `url`,
 `lifecycle?`, `apiVersion?`.
 
-> Runtimes a host can *call into* from a button or a declarative filter (the
+> Runtimes a host can _call into_ from a button or a declarative filter (the
 > `callRuntime` action) are a further step not part of this version; a
 > version-1 runtime drives the host, not the other way around.
 
@@ -279,6 +279,7 @@ An extension may contribute buttons to host-defined UI slots:
   icon set may substitute a generic extension icon. (A generic `symbol`
   reference field is reserved for the symbols resource integration.)
 - `action` — what the button does:
+
   - `togglePanel` — open the named `panel` from the same manifest, or close
     it if it is already the active panel (recommended; matches the host's
     built-in panel-button behavior).
@@ -303,7 +304,7 @@ An extension may contribute buttons to host-defined UI slots:
     (re-run a search, recompute a filter, etc.), with any visible result
     flowing back through the normal event loop (`state.changed`,
     `filters.changed`, …). But it is a general message: the host delivers a
-    topic to *any* subscribed context, so it can also drive a panel or, across
+    topic to _any_ subscribed context, so it can also drive a panel or, across
     extensions, let a federation of plugins coordinate and even build ad-hoc
     service discovery over nothing but this messaging infrastructure.
 
@@ -341,9 +342,19 @@ inside a routing envelope over `postMessage`**:
   "host": "freeboard-sk",
   "hostVersion": "2.24.0",
   "apiVersion": "1",
-  "capabilities": ["widgets", "panels.iframe", "buttons", "signalk.stream",
-                   "signalk.put", "units", "map", "resources",
-                   "resources.filter", "background.iframe", "ui"],
+  "capabilities": [
+    "widgets",
+    "panels.iframe",
+    "buttons",
+    "signalk.stream",
+    "signalk.put",
+    "units",
+    "map",
+    "resources",
+    "resources.filter",
+    "background.iframe",
+    "ui"
+  ],
   "context": {
     "kind": "widget",
     "id": "gauge",
@@ -368,27 +379,27 @@ contract** — any conforming implementation interoperates.
 
 ## Host API (version 1)
 
-| Method | Params | Result |
-| --- | --- | --- |
-| `events.subscribe` | `{ patterns: string[] }` | `{ subscriptionId }` |
-| `events.unsubscribe` | `{ subscriptionId }` | `{}` |
-| `state.get` | `{ scope?, keys? }` | `{ values }` |
-| `state.set` | `{ scope?, values }` | `{}` |
-| `signalk.subscribe` | `{ paths: string[] }` (literal paths) | `{ subscriptionId }` |
-| `signalk.unsubscribe` | `{ subscriptionId }` | `{}` |
-| `signalk.put` | `{ path, value }` | server PUT response |
-| `units.get` | — | `{ units }` |
-| `resources.list` | `{ type, query? }` | resource collection |
-| `resources.setFilter` | `{ type, filter }` | `{}` |
-| `resources.clearFilter` | `{ type }` | `{}` |
-| `map.getView` | — | `{ center, zoom, bounds }` |
-| `map.center` | `{ position: [lon, lat], zoom? }` | `{}` |
-| `map.fitBounds` | `{ bounds: [minLon, minLat, maxLon, maxLat] }` | `{}` |
-| `ui.openPanel` | `{ panel }` | `{}` |
-| `ui.togglePanel` | `{ panel }` | `{}` |
-| `ui.openConfigPanel` | — (widget contexts) | `{}` |
-| `ui.toggleConfigPanel` | — (widget contexts) | `{}` |
-| `ui.closePanel` | — (panel contexts) | `{}` |
+| Method                  | Params                                         | Result                     |
+| ----------------------- | ---------------------------------------------- | -------------------------- |
+| `events.subscribe`      | `{ patterns: string[] }`                       | `{ subscriptionId }`       |
+| `events.unsubscribe`    | `{ subscriptionId }`                           | `{}`                       |
+| `state.get`             | `{ scope?, keys? }`                            | `{ values }`               |
+| `state.set`             | `{ scope?, values }`                           | `{}`                       |
+| `signalk.subscribe`     | `{ paths: string[] }` (literal paths)          | `{ subscriptionId }`       |
+| `signalk.unsubscribe`   | `{ subscriptionId }`                           | `{}`                       |
+| `signalk.put`           | `{ path, value }`                              | server PUT response        |
+| `units.get`             | —                                              | `{ units }`                |
+| `resources.list`        | `{ type, query? }`                             | resource collection        |
+| `resources.setFilter`   | `{ type, filter }`                             | `{}`                       |
+| `resources.clearFilter` | `{ type }`                                     | `{}`                       |
+| `map.getView`           | —                                              | `{ center, zoom, bounds }` |
+| `map.center`            | `{ position: [lon, lat], zoom? }`              | `{}`                       |
+| `map.fitBounds`         | `{ bounds: [minLon, minLat, maxLon, maxLat] }` | `{}`                       |
+| `ui.openPanel`          | `{ panel }`                                    | `{}`                       |
+| `ui.togglePanel`        | `{ panel }`                                    | `{}`                       |
+| `ui.openConfigPanel`    | — (widget contexts)                            | `{}`                       |
+| `ui.toggleConfigPanel`  | — (widget contexts)                            | `{}`                       |
+| `ui.closePanel`         | — (panel contexts)                             | `{}`                       |
 
 **Host events**
 
@@ -399,7 +410,7 @@ subscribes pays nothing). A host emits an event when the corresponding
 capability is supported: `state.changed` always; `sk.<path>` with
 `signalk.stream`; `filters.changed` with `resources.filter`. The
 connection-level notifications `bus.ready` and `bus.handshake` (see
-Connection establishment) are the only other host/extension events and are
+Communication) are the only other host/extension events and are
 handled by the protocol layer, not subscribed to.
 
 - `state.changed` — `{ scope, instanceId, keys }`: the extension's stored
@@ -421,7 +432,7 @@ distance: 18520 } }` serializes to the resources API query string. This
 keeps extensions inside the host's auth/session semantics; extensions may
 still call the server REST API directly (same-origin) when needed.
 
-`resources.setFilter` controls what the host *displays* for a resource
+`resources.setFilter` controls what the host _displays_ for a resource
 type — it never modifies stored resources:
 
 ```json
@@ -430,7 +441,9 @@ type — it never modifies stored resources:
   "filter": {
     "mode": "include",
     "ids": ["urn:mrn:signalk:uuid:..."],
-    "match": [ { "path": "properties.skIcon", "op": "eq", "value": "anchorage" } ],
+    "match": [
+      { "path": "properties.skIcon", "op": "eq", "value": "anchorage" }
+    ],
     "label": "Anchorage < 10 nm: 2 matches"
   }
 }
@@ -440,7 +453,7 @@ type — it never modifies stored resources:
 - `ids` — resource ids;
 - `match` — AND-combined property conditions with
   `op` one of `eq | ne | lt | lte | gt | gte | in | contains | regex |
-  exists`. `contains` is case-insensitive substring for strings, membership
+exists`. `contains` is case-insensitive substring for strings, membership
   for arrays; `regex` tests a JavaScript regular-expression pattern string
   (in `value`) against the field's string value — a non-string field or an
   invalid pattern fails. Conditions on missing fields are false except
@@ -451,7 +464,7 @@ type — it never modifies stored resources:
   references (per the [Symbols API](https://github.com/joelkoz/signalk-symbol-manager))
   namespace-tolerantly: a bare local id matches a qualified `namespace:id`
   with the same id, and vice versa. So `{ "path": "properties.skIcon",
-  "op": "eq", "value": "anchorage" }` matches a resource whose stored value
+"op": "eq", "value": "anchorage" }` matches a resource whose stored value
   the host has qualified to `default:anchorage` (or `custom:anchorage`).
   Differing namespaces (`custom:x` vs `fsk:x`) do not match, and only
   single-colon `namespace:id` values participate — multi-colon strings such
@@ -459,6 +472,7 @@ type — it never modifies stored resources:
   qualified reference should set `"exact": true` on the condition (or write
   the fully-qualified `value`, or use `regex`). With `exact`, `eq`/`ne`/`in`
   compare strictly and `anchorage` will not match `default:anchorage`.
+
 - `label` — short human-readable description. **Hosts must surface active
   filters to the user** (the reference host renders clearable chips) and
   let the user clear any filter without opening the owning extension.
@@ -474,7 +488,7 @@ storage. Two scopes:
 
 - `instance` — keyed by the context's widget instance (default for widget
   contexts; configuration panels opened with `targetInstance` read and
-  write the *target's* instance scope).
+  write the _target's_ instance scope).
 - `extension` — shared across the extension's contexts.
 
 Every successful `state.set` triggers a `state.changed` event — the loop
@@ -484,11 +498,19 @@ Quota and persistence backend are host-defined.
 ### Unit preferences
 
 Signal K values are SI on the wire, and a path's `meta.units` names the
-unit. What the *user* wants displayed is host configuration. `units.get`
+unit. What the _user_ wants displayed is host configuration. `units.get`
 exposes it:
 
 ```json
-{ "units": { "speed": "kn", "distance": "naut-mile", "depth": "m", "length": "m", "temperature": "C" } }
+{
+  "units": {
+    "speed": "kn",
+    "distance": "naut-mile",
+    "depth": "m",
+    "length": "m",
+    "temperature": "C"
+  }
+}
 ```
 
 Vocabulary: `speed` `kn|m/s|km/h|mph`; `distance` `kilometer|naut-mile`;
@@ -511,45 +533,28 @@ A Signal K plugin:
      type: 'plotterExtensions',
      methods: {
        listResources: async () => ({ [PLUGIN_ID]: manifest }),
-       getResource: async (id) => { /* ... */ },
-       setResource: async () => { throw new Error('read-only') },
-       deleteResource: async () => { throw new Error('read-only') }
+       getResource: async (id) => {
+         /* ... */
+       },
+       setResource: async () => {
+         throw new Error('read-only')
+       },
+       deleteResource: async () => {
+         throw new Error('read-only')
+       }
      }
    })
    ```
 
-2. Serves its widget/panel assets from a **publicly readable** route that it
-   mounts itself. The `app` object handed to a plugin is the Express
-   instance, so mount the asset directory as a top-level static route:
-
-   ```js
-   const ASSET_BASE = `/plotterext/${PLUGIN_ID}`
-   app.use(ASSET_BASE, require('express').static(PUBLIC_DIR))
-   // manifest widget/panel/background urls then point at `${ASSET_BASE}/...`
-   ```
-
-   Manifest URLs are server-relative; hosts resolve them against the Signal K
-   server origin. Two routes to **avoid**:
-
-   - **`/plugins/*`** (e.g. `registerWithRouter`) — the server gates the
-     entire `/plugins` path behind *admin* authentication, so read-only users
-     could not load the assets.
-   - **The `signalk-webapp` keyword** — it would serve `public/` at
-     `/<package-name>/`, but it also lists the package in the server's Webapps
-     launcher. Extension assets are only ever loaded inside the host's iframe,
-     never launched standalone, so they should not appear there. Omit the
-     keyword and self-mount instead.
-
-   A namespaced prefix such as `/plotterext/<package-name>/` keeps the
-   top-level path collision-free. (Express is provided by the server, so
-   requiring it adds no runtime dependency.)
-
-   Note that asset *bytes* being public is not a data-exposure concern: the
-   files are inert UI code, and all data flows through the bus, which the host
-   brokers using the logged-in user's own authenticated server connection.
-   Extension *discovery* is already gated — the manifest list is read through
-   the authenticated resources API, so an unauthenticated user sees no
-   extensions regardless of how the assets are served.
+2. Serves its widget, panel and background assets from a **publicly
+   readable**, non-admin-gated route. Manifest URLs are server-relative;
+   hosts resolve them against the Signal K server origin. The asset files are
+   inert UI code — all data flows through the bus over the user's own
+   authenticated session, and extension _discovery_ is gated by the
+   authenticated resources API, so an unauthenticated user sees no extensions
+   regardless of how the assets are served. For how to mount such a route from
+   a plugin, see
+   [Plotter Extension Provider plugins](../../plugins/plotter_extension_provider_plugins.md).
 
 3. Declares inter-plugin relationships through the App Store mechanism
    (`"signalk": { "recommends": ["<plugin-name>"] }` in `package.json`)
@@ -584,7 +589,7 @@ adversarial boundary**:
   — wire format documentation plus host/extension endpoints with a
   conformance test suite.
 - **Extensions**: [`signalk-instrument-widgets`](https://github.com/joelkoz/signalk-instrument-widgets)
-  (this repository) — gauge, meter, switch and display-value widgets with a
+  — gauge, meter, switch and display-value widgets with a
   shared unit-aware configuration panel — and
   [`signalk-poi-search`](https://github.com/joelkoz/signalk-poi-search) — a
   toolbar button + keepAlive search panel + results widget exercising
@@ -595,22 +600,16 @@ adversarial boundary**:
 
 ---
 
-## Planned (not part of this version)
+## Non-Goals
 
-The working draft of the broader specification also defines
-**manifest-declared `postFetch` filter chains** — distinct from a feature
-this version already ships, so the distinction is spelled out:
+This version deliberately does not specify:
 
-These are display filters declared *statically in the manifest* (not pushed
-at runtime), evaluated by the host on every resource fetch as a
-`priority`-ordered chain. This is **not** the same as the imperative
-`resources.setFilter` this version ships, where running extension code pushes
-an id set or `match` predicate. A declared entry is either a `match`
-predicate (which reuses the same Property Predicate language as
-`resources.setFilter`, so the predicate evaluator is shared) or one backed by
-a **background runtime** addressed through `callRuntime` — the host-into-
-runtime call direction, which this version's headless runtimes (they drive
-the host, not vice versa) do not yet implement. The predicate-only form can
-land independently; the runtime-backed form depends on `callRuntime`.
-
-This will be added to this document as its reference implementation lands.
+- **Manifest-declared filter chains.** Display filtering here is imperative:
+  running extension code pushes an id set or `match` predicate via
+  `resources.setFilter`. Filters declared _statically in the manifest_ and
+  evaluated by the host on every resource fetch are out of scope for this
+  version.
+- **Host-into-runtime calls (`callRuntime`).** Background runtimes drive the
+  host — they call host methods and react to host events; the host does not
+  call into a runtime. The reverse call direction is out of scope for this
+  version.
