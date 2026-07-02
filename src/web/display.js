@@ -4,8 +4,8 @@
 
 import {
   startInstrument,
-  convert,
-  conversionUnits,
+  resolveDisplay,
+  USE_DEFAULT,
   formatValue
 } from './common.js'
 
@@ -15,10 +15,16 @@ function esc(s) {
   )
 }
 
-function render({ config, value }) {
+function render({ config, value, meta, prefs }) {
   const root = document.getElementById('root')
-  const display = convert(value, config.convert)
-  const units = config.units || conversionUnits(config.convert)
+  const { value: display, symbol } = resolveDisplay({
+    value,
+    convert: config.convert,
+    meta,
+    prefs,
+    path: config.path
+  })
+  const units = config.units || symbol
   let text
   if (value === undefined || value === null) {
     text = '--'
@@ -47,7 +53,7 @@ function render({ config, value }) {
 }
 
 startInstrument({
-  defaults: { convert: 'none', decimals: 1, topLabel: '', bottomLabel: '' },
+  defaults: { convert: USE_DEFAULT, decimals: 1, topLabel: '', bottomLabel: '' },
   onUpdate: render
 }).catch((err) => {
   document.getElementById('root').textContent = 'Host connection failed'

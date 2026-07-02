@@ -6,37 +6,15 @@
 
 import { connectExtension } from 'signalk-plotterext-bus/extension'
 
-export const CONVERSIONS = {
-  none: { label: 'Raw value', units: '', fn: (v) => v },
-  'ms-kn': { label: 'm/s → knots', units: 'kn', fn: (v) => v * 1.943844 },
-  'ms-kmh': { label: 'm/s → km/h', units: 'km/h', fn: (v) => v * 3.6 },
-  'ms-mph': { label: 'm/s → mph', units: 'mph', fn: (v) => v * 2.236936 },
-  'k-c': { label: 'K → °C', units: '°C', fn: (v) => v - 273.15 },
-  'k-f': {
-    label: 'K → °F',
-    units: '°F',
-    fn: (v) => (v - 273.15) * 1.8 + 32
-  },
-  'rad-deg': {
-    label: 'rad → °',
-    units: '°',
-    fn: (v) => (v * 180) / Math.PI
-  },
-  'ratio-pct': { label: 'ratio → %', units: '%', fn: (v) => v * 100 },
-  'm-ft': { label: 'm → ft', units: 'ft', fn: (v) => v * 3.28084 },
-  'm-nm': { label: 'm → nm', units: 'nm', fn: (v) => v / 1852 },
-  'm-km': { label: 'm → km', units: 'km', fn: (v) => v / 1000 },
-  'pa-hpa': { label: 'Pa → hPa', units: 'hPa', fn: (v) => v / 100 }
-}
-
-export function convert(value, conversionKey) {
-  const conv = CONVERSIONS[conversionKey] ?? CONVERSIONS.none
-  return typeof value === 'number' ? conv.fn(value) : value
-}
-
-export function conversionUnits(conversionKey) {
-  return (CONVERSIONS[conversionKey] ?? CONVERSIONS.none).units
-}
+// Unit conversion / display resolution lives in units.mjs (pure, no bus) so it
+// can be unit tested. Re-exported here so widgets keep a single import surface.
+export {
+  CONVERSIONS,
+  USE_DEFAULT,
+  convert,
+  conversionUnits,
+  resolveDisplay
+} from './units.mjs'
 
 export function formatValue(value, decimals = 1) {
   if (typeof value !== 'number' || !isFinite(value)) return '--'
@@ -67,24 +45,59 @@ function installLongPress(client) {
 }
 
 /**
+ * Fetch a path's Signal K metadata (which carries `units` and the server's
+ * `displayUnits` preference) over same-origin REST. The bus value stream does
+ * not carry meta, so widgets read it here. Returns undefined on any failure.
+ */
+async function fetchMeta(path) {
+  try {
+    const res = await fetch(
+      `/signalk/v1/api/vessels/self/${path.replace(/\./g, '/')}/meta`,
+      { credentials: 'include' }
+    )
+    if (!res.ok) return undefined
+    return await res.json()
+  } catch {
+    return undefined
+  }
+}
+
+/** The host's coarse display-unit category preferences (capability `units`),
+ *  or null when the host does not expose them. Used only as the fallback when
+ *  the server publishes no per-path `displayUnits`. */
+async function fetchPrefs(client) {
+  if (!client.hasCapability('units')) return null
+  try {
+    const r = await client.call('units.get')
+    return r?.units ?? null
+  } catch {
+    return null
+  }
+}
+
+/**
  * Connect, load per-instance config, follow config changes and the
- * configured Signal K path. Calls onUpdate({ config, value, client }) on
- * every change. Returns { client, longPressFired } once connected.
+ * configured Signal K path. Calls onUpdate({ config, value, meta, prefs,
+ * client }) on every change. Returns { client, longPressFired } once
+ * connected.
  */
 export async function startInstrument({ defaults = {}, onUpdate }) {
   const client = await connectExtension()
   const longPressFired = installLongPress(client)
+  const prefs = await fetchPrefs(client)
 
   let config = { ...defaults }
   let value
+  let meta
   let unsubscribeSk = null
 
-  const emit = () => onUpdate({ config, value, client })
+  const emit = () => onUpdate({ config, value, meta, prefs, client })
 
   async function applyConfig() {
     const stored = await client.state.get()
     config = { ...defaults, ...stored }
     value = undefined
+    meta = undefined
     if (unsubscribeSk) {
       const u = unsubscribeSk
       unsubscribeSk = null
@@ -92,6 +105,8 @@ export async function startInstrument({ defaults = {}, onUpdate }) {
     }
     emit()
     if (config.path) {
+      meta = await fetchMeta(config.path)
+      emit()
       unsubscribeSk = await client.signalk.subscribe([config.path], (ev) => {
         value = ev.value
         emit()

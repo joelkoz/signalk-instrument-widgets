@@ -2,8 +2,8 @@
 
 import {
   startInstrument,
-  convert,
-  conversionUnits,
+  resolveDisplay,
+  USE_DEFAULT,
   formatValue
 } from './common.js'
 
@@ -22,13 +22,19 @@ function arcPath(cx, cy, r, fromDeg, toDeg) {
   return `M ${x1.toFixed(2)} ${y1.toFixed(2)} A ${r} ${r} 0 ${large} 1 ${x2.toFixed(2)} ${y2.toFixed(2)}`
 }
 
-function render({ config, value }) {
+function render({ config, value, meta, prefs }) {
   const root = document.getElementById('root')
   const min = Number(config.min ?? 0)
   const max = Number(config.max ?? 10)
   const decimals = Number(config.decimals ?? 1)
-  const display = convert(value, config.convert)
-  const units = config.units || conversionUnits(config.convert)
+  const { value: display, symbol } = resolveDisplay({
+    value,
+    convert: config.convert,
+    meta,
+    prefs,
+    path: config.path
+  })
+  const units = config.units || symbol
   const label = config.label || config.path || 'Not configured'
 
   let frac = 0
@@ -54,7 +60,7 @@ function render({ config, value }) {
 }
 
 startInstrument({
-  defaults: { min: 0, max: 10, decimals: 1, convert: 'none' },
+  defaults: { min: 0, max: 10, decimals: 1, convert: USE_DEFAULT },
   onUpdate: render
 }).catch((err) => {
   document.getElementById('root').textContent = 'Host connection failed'

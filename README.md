@@ -20,6 +20,13 @@ Each widget is configured on its own: pick the value to show, choose the
 units, and set the range and labels. So you can place two gauges showing two
 different values side by side. Your settings are remembered for each widget.
 
+Units follow your server's display preferences by default. The **Units**
+setting starts on **"Server default"**, which shows each value in the unit
+you've chosen in the Signal K server's Unit Preferences — so most widgets need
+no unit setup at all, and changing a preference on the server updates the
+widgets to match. Pick a specific conversion instead only when you want that
+one widget to override your server preference.
+
 ## Demo switch
 
 If your server has no real switches to control (for example a demo or

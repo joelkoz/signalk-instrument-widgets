@@ -4,8 +4,8 @@
 // live via the host's state.changed event.
 
 import { connectExtension } from 'signalk-plotterext-bus/extension'
-import { CONVERSIONS } from './common.js'
-import { validConversions, defaultConversion } from './units.mjs'
+import { CONVERSIONS, USE_DEFAULT } from './common.js'
+import { validConversions } from './units.mjs'
 
 const NUMERIC = 'numeric'
 const BOOLEAN = 'boolean'
@@ -112,7 +112,7 @@ function buildForm(widgetType, paths, state) {
   }
   if (spec.fields.includes('convert')) {
     rows.push(
-      fieldRow('convert', 'Conversion', `<select id="convert"></select>`)
+      fieldRow('convert', 'Units', `<select id="convert"></select>`)
     )
   }
   if (spec.fields.includes('min')) {
@@ -150,26 +150,32 @@ function readForm(widgetType) {
 }
 
 /**
- * Repopulate the conversion select for the currently entered path: only
- * conversions valid for the path's SK meta units are offered, and the
- * default follows the host's preferred display units.
+ * Repopulate the conversion select for the currently entered path. The default,
+ * always-offered choice is "Server default", which lets the widget follow the
+ * user's server-defined display preference (`meta.displayUnits`) at render
+ * time — so most widgets never need this changed. The explicit conversions
+ * below it are per-widget overrides, filtered to those valid for the path's SK
+ * meta units. A previously saved choice is kept while its path is selected.
  */
-function refreshConversionOptions(unitsByPath, prefs, savedPath, savedConvert) {
+function refreshConversionOptions(unitsByPath, savedPath, savedConvert) {
   const select = document.getElementById('convert')
   if (!select) return
   const path = document.getElementById('path').value.trim()
   const units = unitsByPath[path]
   const valid = validConversions(units, Object.keys(CONVERSIONS))
-  const selected =
-    path === savedPath && savedConvert && valid.includes(savedConvert)
-      ? savedConvert
-      : defaultConversion(units, path, prefs)
-  select.innerHTML = valid
-    .map(
+  const keep =
+    path === savedPath &&
+    savedConvert &&
+    (savedConvert === USE_DEFAULT || valid.includes(savedConvert))
+  const selected = keep ? savedConvert : USE_DEFAULT
+  const options = [
+    `<option value="${USE_DEFAULT}" ${selected === USE_DEFAULT ? 'selected' : ''}>Server default</option>`,
+    ...valid.map(
       (key) =>
         `<option value="${key}" ${key === selected ? 'selected' : ''}>${CONVERSIONS[key].label}</option>`
     )
-    .join('')
+  ]
+  select.innerHTML = options.join('')
 }
 
 async function main() {
@@ -179,15 +185,9 @@ async function main() {
   const spec = WIDGET_FIELDS[widgetType] ?? WIDGET_FIELDS.gauge
 
   root.innerHTML = '<p class="status">Loading Signal K paths…</p>'
-  const [{ paths, unitsByPath }, state, prefs] = await Promise.all([
+  const [{ paths, unitsByPath }, state] = await Promise.all([
     fetchPaths(spec.pathKind).catch(() => ({ paths: [], unitsByPath: {} })),
-    client.state.get(),
-    client.hasCapability('units')
-      ? client
-          .call('units.get')
-          .then((r) => r.units)
-          .catch(() => null)
-      : Promise.resolve(null)
+    client.state.get()
   ])
 
   root.innerHTML = `
@@ -201,7 +201,7 @@ async function main() {
 
   if (spec.fields.includes('convert')) {
     const refresh = () =>
-      refreshConversionOptions(unitsByPath, prefs, state.path, state.convert)
+      refreshConversionOptions(unitsByPath, state.path, state.convert)
     refresh()
     const pathInput = document.getElementById('path')
     pathInput.addEventListener('change', refresh)

@@ -76,16 +76,32 @@ Per widget:
   switch-like (`switches` segment or `.state` suffix) — for the switch. The
   same walk collects each path's `meta.units`.
 - Conversion selection is unit-aware (logic in `src/web/units.mjs`):
-  - Offered conversions are filtered to those valid for the selected path's
-    `meta.units` (paths without metadata offer everything).
-  - The preselected conversion combines the path's units with the host's
-    preferred display units (`units.get`, capability `units`; tolerated
-    absent): speed/temperature follow the preference directly; metre paths
-    disambiguate by path name (depth -> depth preference, distance/log ->
-    distance preference, otherwise length preference); angles, ratios and
-    pressure default to degrees, percent and hPa.
-  - A previously saved conversion is kept while the saved path is selected;
-    choosing a different path re-derives the default.
+  - The default, always-offered choice is **"Server default"** (`convert`
+    value `default`, the schema default). It defers unit selection to render
+    time, so an unconfigured widget follows the user's server-defined display
+    preferences automatically and never needs configuring in the normal case.
+  - Below it, explicit per-widget conversions are offered as overrides,
+    filtered to those valid for the selected path's `meta.units` (paths
+    without metadata offer everything). An explicit choice is the ultimate
+    authority and overrides the server preference.
+  - A previously saved choice (including "Server default") is kept while the
+    saved path is selected; choosing a different path resets to "Server
+    default".
+- Display-unit resolution at render time (`resolveDisplay`, in
+  `src/web/units.mjs`) applies this authority order for every value shown:
+  1. An explicit per-widget conversion key, if set (never overridden).
+  2. The server's per-path display preference — `meta.displayUnits`
+     (Signal K Unit Preferences): its `formula` converts the value and its
+     `symbol`/`targetUnit` labels it. Fetched over same-origin REST
+     (`.../<path>/meta`) by the widget runtime, since the bus value stream
+     carries no metadata.
+  3. Fallback heuristic combining the path's `meta.units` with the host's
+     coarse category preferences (`units.get`, capability `units`; tolerated
+     absent): speed/temperature follow the preference directly; metre paths
+     disambiguate by path name (depth -> depth preference, distance/log ->
+     distance preference, otherwise length preference); angles, ratios and
+     pressure default to degrees, percent and hPa. The percent meter passes a
+     `ratio-pct` fallback so ratio paths still read as a percentage.
 - Fields by widget type:
   - gauge: path, label, conversion, min, max, decimals
   - meter: path, label, conversion, decimals
@@ -104,14 +120,15 @@ path         string   Signal K path (dot notation)
 label        string   display label (falls back to path)
 topLabel     string   display widget: small top title (blank = hidden)
 bottomLabel  string   display widget: large bottom label (blank = hidden)
-convert      string   conversion key (see below)
+convert      string   conversion key (see below; default `default`)
 min, max     number   gauge dial bounds
 decimals     number   displayed decimal places
 ```
 
-Conversion keys: `none`, `ms-kn`, `ms-kmh`, `ms-mph`, `k-c`, `k-f`,
-`rad-deg`, `ratio-pct`, `m-ft`, `m-nm`, `pa-hpa`. Unknown keys must behave
-as `none` (forward compatibility).
+Conversion keys: `default` (follow the server/host display preference — the
+default), `none`, `ms-kn`, `ms-kmh`, `ms-mph`, `k-c`, `k-f`, `rad-deg`,
+`ratio-pct`, `m-ft`, `m-nm`, `m-km`, `pa-hpa`. Unknown keys must behave as
+`default` (forward compatibility).
 
 ## 5. Demo switch
 

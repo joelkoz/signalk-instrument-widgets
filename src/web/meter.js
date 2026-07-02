@@ -2,16 +2,26 @@
 
 import {
   startInstrument,
-  convert,
+  resolveDisplay,
+  USE_DEFAULT,
   formatValue
 } from './common.js'
 
-function render({ config, value }) {
+function render({ config, value, meta, prefs }) {
   const root = document.getElementById('root')
   const label = config.label || config.path || 'Not configured'
-  // A meter shows percent: ratio paths (0..1) use the ratio->% conversion by
-  // default; paths already in percent can use 'none'.
-  const display = convert(value, config.convert ?? 'ratio-pct')
+  // A meter shows percent. "Use default" follows the server/host preference
+  // (ratio paths convert 0..1 -> %); when nothing better is known it falls
+  // back to ratio->%. An explicit conversion (e.g. 'none' for already-percent
+  // paths) still wins.
+  const { value: display } = resolveDisplay({
+    value,
+    convert: config.convert,
+    meta,
+    prefs,
+    path: config.path,
+    fallback: 'ratio-pct'
+  })
   const pct =
     typeof display === 'number' && isFinite(display)
       ? Math.min(100, Math.max(0, display))
@@ -27,7 +37,7 @@ function render({ config, value }) {
 }
 
 startInstrument({
-  defaults: { convert: 'ratio-pct', decimals: 0 },
+  defaults: { convert: USE_DEFAULT, decimals: 0 },
   onUpdate: render
 }).catch((err) => {
   document.getElementById('root').textContent = 'Host connection failed'
