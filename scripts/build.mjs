@@ -77,4 +77,7 @@ configure it.</p>
 `
 )
 
-console.log('public/ assets written')
+// stderr, not stdout: `prepare` runs during `npm pack`, and npm 10 does so even
+// under --ignore-scripts. Anything on stdout is prepended to the JSON that
+// `npm pack --json` emits, which the SignalK plugin-CI pack check parses.
+console.error('public/ assets written')
