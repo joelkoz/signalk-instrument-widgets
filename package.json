@@ -1,10 +1,11 @@
 {
   "name": "signalk-instrument-widgets",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Gauge, meter and switch widgets for Signal K chartplotters that support the plotterExtensions resource type",
   "main": "plugin/index.js",
   "keywords": [
     "signalk-node-server-plugin",
+    "signalk-category-plotter-extensions",
     "signalk-category-chart-plotters"
   ],
   "files": [
