@@ -70,6 +70,19 @@ Per widget:
 - Opened by the host with `context.targetInstance` (the widget instance
   being configured) and `context.targetWidget` (`gauge` | `meter` |
   `switch`). State reads/writes apply to the target instance's scope.
+- The panel is touch-first: everything but the free-text labels is set by
+  tapping, so it works on a helm touchscreen without a keyboard.
+  - The path is picked by browsing one segment at a time (pure logic in
+    `src/web/picker.mjs`): a breadcrumb back to any level, groups with the
+    number of paths below them, then the paths themselves with their current
+    value. A group holding nothing but one deeper group is skipped. The panel
+    reopens on the level of the saved path.
+  - Units are a row of buttons; minimum, maximum and decimals are +/-
+    steppers (repeating while held). Min/max step by a round value (1, 2 or 5
+    times a power of ten) that crosses the current range in about twenty
+    taps, and min always stays below max.
+  - Tap targets are at least 44px high, and Save/Cancel stay visible at the
+    bottom while the panel scrolls.
 - Path candidates come from the server's full data tree
   (`/signalk/v1/api/vessels/self`, same-origin fetch): numeric leaves for
   gauge/meter/display; boolean leaves — plus numeric leaves that look
@@ -161,6 +174,7 @@ Playback/demo servers rarely have writable switch paths, so by default
 
 `node --test` must cover at minimum:
 
+- Path browsing and stepping helpers (`src/web/picker.mjs`).
 - Provider registration: type `plotterExtensions`; manifest shape (api
   version, required capabilities, three iframe widgets with valid sizes and
   config panel references, asset URL prefix); single-resource get;
