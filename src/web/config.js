@@ -88,6 +88,9 @@ async function fetchPaths(pathKind) {
     valueByPath[path] = value
     const kind = kindOf(value)
     if (kind === pathKind) paths.push(path)
+    // A sensor that has lost its reading reports null, but its units still
+    // say it is a number: it stays pickable so a widget can be set up for it.
+    if (pathKind === NUMERIC && value === null && metaUnits) paths.push(path)
     // Switch-style paths are numeric 0/1 on the wire; offer them for
     // boolean widgets too.
     if (
@@ -111,6 +114,7 @@ function esc(text) {
 
 function rawValueText(value, units) {
   if (typeof value === 'boolean') return value ? 'on' : 'off'
+  if (value === null) return 'no value'
   if (typeof value !== 'number') return ''
   const digits = Math.abs(value) >= 100 ? 0 : Math.abs(value) >= 1 ? 2 : 3
   return `${formatValue(value, digits)}${units ? ` ${units}` : ''}`
@@ -184,7 +188,8 @@ async function main() {
     decimals: Number(state.decimals ?? 1)
   }
   let browsing = settle(paths, draft.path ? parentOf(draft.path) : '')
-  const quick = quickPicks(paths)
+  // Quick picks offer only values the server has right now.
+  const quick = quickPicks(paths.filter((p) => valueByPath[p] !== null))
 
   const textRows = Object.entries(TEXT_FIELDS)
     .filter(([id]) => has(id))
