@@ -307,6 +307,7 @@ async function main() {
   }
 
   function pick(path) {
+    if (path === draft.path) return
     draft.path = path
     // A previously saved conversion is kept only while its path is selected.
     const valid = conversionChoices(unitsByPath[path]).map((c) => c.key)
@@ -332,9 +333,15 @@ async function main() {
         niceStep(Math.abs(draft.max - draft.min)),
         direction
       )
-      // Keep the range non-empty: min stays below max.
-      if (id === 'min' && next >= draft.max) return
-      if (id === 'max' && next <= draft.min) return
+      // Keep the range non-empty: min stays below max. A range saved the
+      // wrong way round may only move towards a valid one.
+      if (draft.min < draft.max) {
+        if (id === 'min' && next >= draft.max) return
+        if (id === 'max' && next <= draft.min) return
+      } else {
+        if (id === 'min' && direction > 0) return
+        if (id === 'max' && direction < 0) return
+      }
       draft[id] = next
     }
     renderSteppers()

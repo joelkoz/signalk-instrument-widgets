@@ -49,6 +49,7 @@ test('settle skips groups that only hold one deeper group', () => {
   assert.strictEqual(settle(PATHS, 'tanks'), 'tanks')
   assert.strictEqual(settle(PATHS, 'tanks.fuel'), 'tanks.fuel.0')
   assert.strictEqual(settle(PATHS, ''), '')
+  assert.strictEqual(settle(PATHS, 'navigation'), 'navigation')
 })
 
 test('parentOf and crumbs walk the path segments', () => {
