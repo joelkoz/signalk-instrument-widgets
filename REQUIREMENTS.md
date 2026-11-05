@@ -77,6 +77,11 @@ Per widget:
     number of paths below them, then the paths themselves with their current
     value. A group holding nothing but one deeper group is skipped. The panel
     reopens on the level of the saved path.
+  - Quick picks above the browser offer the values put on an instrument most
+    (SOG, STW, COG, HDG, depth, wind, air pressure and temperatures; the list
+    is `QUICK_PICKS` in `src/web/picker.mjs`), only those the server has a
+    value for. A tap selects the path and fills any empty label with the
+    abbreviation (and the display widget's top label with the full name).
   - Units are a row of buttons; minimum, maximum and decimals are +/-
     steppers (repeating while held). Min/max step by a round value (1, 2 or 5
     times a power of ten) that crosses the current range in about twenty

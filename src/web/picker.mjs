@@ -83,3 +83,26 @@ export function stepValue(value, step, direction) {
   const next = direction > 0 ? Math.floor(units) + 1 : Math.ceil(units) - 1
   return Number((next * step).toFixed(decimals))
 }
+
+/** Values people put on an instrument most, with the abbreviation instruments use. */
+export const QUICK_PICKS = [
+  { path: 'navigation.speedOverGround', label: 'SOG', title: 'Speed over ground' },
+  { path: 'navigation.speedThroughWater', label: 'STW', title: 'Speed through water' },
+  { path: 'navigation.courseOverGroundTrue', label: 'COG', title: 'Course over ground' },
+  { path: 'navigation.headingTrue', label: 'HDG', title: 'Heading' },
+  { path: 'environment.depth.belowTransducer', label: 'Depth', title: 'Depth' },
+  { path: 'environment.wind.speedApparent', label: 'AWS', title: 'Apparent wind speed' },
+  { path: 'environment.wind.angleApparent', label: 'AWA', title: 'Apparent wind angle' },
+  { path: 'environment.wind.speedTrue', label: 'TWS', title: 'True wind speed' },
+  { path: 'environment.wind.angleTrueWater', label: 'TWA', title: 'True wind angle' },
+  { path: 'environment.wind.directionTrue', label: 'TWD', title: 'True wind direction' },
+  { path: 'environment.outside.pressure', label: 'Baro', title: 'Air pressure' },
+  { path: 'environment.outside.temperature', label: 'Air', title: 'Air temperature' },
+  { path: 'environment.water.temperature', label: 'Water', title: 'Water temperature' }
+]
+
+/** The quick picks this server actually has a value for, in their fixed order. */
+export function quickPicks(paths) {
+  const present = new Set(paths)
+  return QUICK_PICKS.filter((q) => present.has(q.path))
+}

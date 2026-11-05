@@ -8,7 +8,8 @@ import {
   parentOf,
   crumbs,
   niceStep,
-  stepValue
+  stepValue,
+  quickPicks
 } from '../src/web/picker.mjs'
 
 const PATHS = [
@@ -75,4 +76,12 @@ test('stepValue moves to the next grid point without float residue', () => {
   assert.strictEqual(stepValue(3, 2, 1), 4)
   assert.strictEqual(stepValue(3, 2, -1), 2)
   assert.strictEqual(stepValue(0, 5, -1), -5)
+})
+
+test('quickPicks offers only values the server has, in a fixed order', () => {
+  assert.deepStrictEqual(
+    quickPicks(PATHS).map((q) => q.label),
+    ['SOG', 'COG']
+  )
+  assert.deepStrictEqual(quickPicks([]), [])
 })

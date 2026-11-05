@@ -16,7 +16,8 @@ import {
   parentOf,
   crumbs,
   niceStep,
-  stepValue
+  stepValue,
+  quickPicks
 } from './picker.mjs'
 
 const NUMERIC = 'numeric'
@@ -183,6 +184,7 @@ async function main() {
     decimals: Number(state.decimals ?? 1)
   }
   let browsing = settle(paths, draft.path ? parentOf(draft.path) : '')
+  const quick = quickPicks(paths)
 
   const textRows = Object.entries(TEXT_FIELDS)
     .filter(([id]) => has(id))
@@ -206,6 +208,7 @@ async function main() {
     <h2>Configure ${widgetType}</h2>
     <section class="picker">
       <div class="field-title">Signal K path</div>
+      ${quick.length ? '<div class="choices" id="quick"></div>' : ''}
       <div class="picked" id="picked"></div>
       <nav class="crumbs" id="crumbs"></nav>
       <div class="browse" id="browse"></div>
@@ -228,6 +231,27 @@ async function main() {
     byId('picked').innerHTML = draft.path
       ? esc(draft.path)
       : '<span class="hint">Tap a value below</span>'
+  }
+
+  function renderQuick() {
+    if (!quick.length) return
+    byId('quick').innerHTML = quick
+      .map(
+        (q) =>
+          `<button type="button" class="choice${q.path === draft.path ? ' on' : ''}" data-path="${esc(q.path)}" title="${esc(q.title)}">${esc(q.label)}</button>`
+      )
+      .join('')
+  }
+
+  /** Fill labels the user left empty from a quick pick: one tap sets it all up. */
+  function labelFromQuick(q) {
+    const fill = (id, text) => {
+      const field = byId(id)
+      if (field && !field.value.trim()) field.value = text
+    }
+    if (has('label')) fill('label', q.label)
+    if (has('topLabel')) fill('topLabel', q.title)
+    if (has('bottomLabel')) fill('bottomLabel', q.label)
   }
 
   function renderBrowser() {
@@ -290,6 +314,7 @@ async function main() {
       path === state.path && valid.includes(state.convert ?? USE_DEFAULT)
         ? (state.convert ?? USE_DEFAULT)
         : USE_DEFAULT
+    renderQuick()
     renderPicked()
     renderBrowser()
     renderUnits()
@@ -315,6 +340,16 @@ async function main() {
     renderSteppers()
   }
 
+  if (quick.length) {
+    byId('quick').addEventListener('click', (ev) => {
+      const chip = ev.target.closest('[data-path]')
+      if (!chip) return
+      const q = quick.find((item) => item.path === chip.dataset.path)
+      browsing = settle(paths, parentOf(q.path))
+      labelFromQuick(q)
+      pick(q.path)
+    })
+  }
   byId('crumbs').addEventListener('click', (ev) => {
     const crumb = ev.target.closest('[data-prefix]')
     if (crumb) browse(crumb.dataset.prefix)
@@ -341,6 +376,7 @@ async function main() {
     }
   }
 
+  renderQuick()
   renderPicked()
   renderBrowser()
   renderUnits()
