@@ -352,9 +352,14 @@ async function main() {
       const chip = ev.target.closest('[data-path]')
       if (!chip) return
       const q = quick.find((item) => item.path === chip.dataset.path)
-      browsing = settle(paths, parentOf(q.path))
       labelFromQuick(q)
-      pick(q.path)
+      // Re-tapping the chosen value still brings its group back into view.
+      if (q.path === draft.path) {
+        browse(parentOf(q.path))
+      } else {
+        browsing = settle(paths, parentOf(q.path))
+        pick(q.path)
+      }
     })
   }
   byId('crumbs').addEventListener('click', (ev) => {
