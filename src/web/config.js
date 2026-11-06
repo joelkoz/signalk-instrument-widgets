@@ -195,8 +195,8 @@ async function main() {
     .filter(([id]) => has(id))
     .map(
       ([id, { title, placeholder }]) => `
-      <label class="row"><span>${title}</span>
-        <input id="${id}" value="${esc(state[id] ?? '')}" placeholder="${placeholder}">
+      <label class="row"><span>${esc(title)}</span>
+        <input id="${id}" value="${esc(state[id] ?? '')}" placeholder="${esc(placeholder)}">
       </label>`
     )
     .join('')
@@ -295,7 +295,7 @@ async function main() {
     byId('convert').innerHTML = conversionChoices(unitsByPath[draft.path])
       .map(
         (c) =>
-          `<button type="button" class="choice${c.key === draft.convert ? ' on' : ''}" data-convert="${c.key}">${esc(c.label)}</button>`
+          `<button type="button" class="choice${c.key === draft.convert ? ' on' : ''}" data-convert="${esc(c.key)}">${esc(c.label)}</button>`
       )
       .join('')
   }

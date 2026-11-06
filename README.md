@@ -21,8 +21,9 @@ units, and set the range and labels. Setup is made for a touchscreen: tap a
 quick pick such as SOG, STW, COG or depth (it fills in the label too), or tap
 through the groups to any other value (each value shows its current
 reading, so you can tell the tanks or batteries apart), tap a unit, and use
-the + and − buttons for the range. Only the labels need a keyboard. So you can place two gauges showing two
-different values side by side. Your settings are remembered for each widget.
+the + and − buttons for the range. Only the labels need a keyboard. Each
+widget keeps its own settings, so you can place two gauges showing two
+different values side by side.
 
 Units follow your server's display preferences by default. The **Units**
 setting starts on **"Server default"**, which shows each value in the unit
