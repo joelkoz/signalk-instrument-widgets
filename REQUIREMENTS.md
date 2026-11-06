@@ -78,6 +78,9 @@ Per widget:
     value ("no value" for a sensor that reports `null`). A group holding
     nothing but one deeper group is skipped. The panel
     reopens on the level of the saved path.
+  - A path the server has not seen yet (a sensor that has not reported) is
+    typed into the field under the list; the field shows a saved path the
+    server does not list.
   - Quick picks above the browser offer the values put on an instrument most
     (SOG, STW, COG, HDG, depth, wind, air pressure and temperatures; the list
     is `QUICK_PICKS` in `src/web/picker.mjs`), only those the server has a

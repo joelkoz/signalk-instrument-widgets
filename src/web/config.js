@@ -217,6 +217,9 @@ async function main() {
       <div class="picked" id="picked"></div>
       <nav class="crumbs" id="crumbs"></nav>
       <div class="browse" id="browse"></div>
+      <label class="row"><span>Or type a path</span>
+        <input id="typedPath" value="${esc(draft.path && !paths.includes(draft.path) ? draft.path : '')}" placeholder="for a sensor that has not reported yet" autocapitalize="off" autocorrect="off" spellcheck="false">
+      </label>
     </section>
     <section class="settings">
       ${textRows}
@@ -311,7 +314,8 @@ async function main() {
     renderBrowser()
   }
 
-  function pick(path) {
+  function pick(path, typed = false) {
+    if (!typed) byId('typedPath').value = ''
     if (path === draft.path) return
     draft.path = path
     // A previously saved conversion is kept only while its path is selected.
@@ -398,6 +402,13 @@ async function main() {
   renderBrowser()
   renderUnits()
   renderSteppers()
+
+  // The browser lists only paths the server has seen, so a sensor that has
+  // not reported yet can still be set up by its path.
+  byId('typedPath').addEventListener('input', (ev) => {
+    const path = ev.target.value.trim()
+    if (path) pick(path, true)
+  })
 
   function collect() {
     const values = { path: draft.path }
