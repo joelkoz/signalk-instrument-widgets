@@ -246,3 +246,132 @@ body.panel .status {
   color: #9fb3c4;
   min-height: 1em;
 }
+
+/* Touch-first controls: every tap target is at least 44px high, so the
+   panel works with a finger on a helm touchscreen. */
+body.panel section {
+  margin-bottom: 14px;
+}
+body.panel .field-title {
+  font-size: 13px;
+  color: #9fb3c4;
+  margin: 4px 0 6px;
+}
+body.panel .picked {
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: #12181d;
+  border: 1px solid #1976d2;
+  font-size: 14px;
+  word-break: break-all;
+  margin-bottom: 8px;
+}
+body.panel .picked .hint {
+  color: #9fb3c4;
+}
+body.panel .crumbs {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 2px;
+  margin-bottom: 6px;
+}
+body.panel .crumbs .sep {
+  color: #5d6d7a;
+  padding: 0 2px;
+}
+body.panel button.crumb {
+  min-height: 44px;
+  padding: 0 10px;
+  background: transparent;
+  border-color: transparent;
+  color: #7fb6ec;
+}
+body.panel button.crumb.here {
+  color: #e8edf2;
+  font-weight: 600;
+}
+body.panel .browse {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+body.panel button.entry {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  min-height: 48px;
+  padding: 0 14px;
+  text-align: left;
+  font-size: 15px;
+}
+body.panel button.entry .name {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+body.panel button.entry .meta {
+  color: #9fb3c4;
+  font-size: 13px;
+  white-space: nowrap;
+}
+body.panel button.entry .chev {
+  color: #9fb3c4;
+  font-size: 20px;
+}
+body.panel button.entry.on,
+body.panel button.choice.on {
+  background: #1976d2;
+  border-color: #1976d2;
+}
+body.panel button.entry.on .meta {
+  color: #e8edf2;
+}
+body.panel input {
+  min-height: 44px;
+  box-sizing: border-box;
+  font-size: 15px;
+}
+body.panel .choices {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+body.panel button.choice {
+  min-height: 44px;
+  padding: 0 14px;
+  font-size: 14px;
+}
+body.panel .stepper {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+body.panel button.step {
+  width: 52px;
+  min-height: 44px;
+  padding: 0;
+  font-size: 22px;
+  touch-action: manipulation;
+}
+body.panel .stepper output {
+  min-width: 72px;
+  text-align: center;
+  font-size: 17px;
+  font-variant-numeric: tabular-nums;
+}
+body.panel .actions {
+  flex-wrap: wrap;
+  position: sticky;
+  bottom: 0;
+  padding: 10px 0;
+  background: #1d242b;
+}
+body.panel .actions button {
+  min-height: 44px;
+  min-width: 96px;
+  font-size: 15px;
+}

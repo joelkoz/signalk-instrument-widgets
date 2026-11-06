@@ -17,8 +17,14 @@ widget — its setup panel opens automatically. Press and hold a **placed**
 widget to reconfigure or remove it.
 
 Each widget is configured on its own: pick the value to show, choose the
-units, and set the range and labels. So you can place two gauges showing two
-different values side by side. Your settings are remembered for each widget.
+units, and set the range and labels. Setup is made for a touchscreen: tap a
+quick pick such as SOG, STW, COG or depth (it fills in the label too), or tap
+through the groups to any other value (each value shows its current
+reading, so you can tell the tanks or batteries apart), tap a unit, and use
+the + and − buttons for the range. Only the labels need a keyboard, and the
+path if its sensor has not reported yet: type it under the list. Each widget
+keeps its own settings, so you can place two gauges showing two different
+values side by side.
 
 Units follow your server's display preferences by default. The **Units**
 setting starts on **"Server default"**, which shows each value in the unit

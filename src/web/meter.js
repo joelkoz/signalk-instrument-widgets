@@ -9,7 +9,7 @@ import {
 
 function render({ config, value, meta, prefs }) {
   const root = document.getElementById('root')
-  const label = config.label || config.path || 'Not configured'
+  const label = config.path ? config.label || config.path : 'Not configured'
   // A meter shows percent. "Use default" follows the server/host preference
   // (ratio paths convert 0..1 -> %); when nothing better is known it falls
   // back to ratio->%. An explicit conversion (e.g. 'none' for already-percent
