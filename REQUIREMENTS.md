@@ -75,12 +75,13 @@ Per widget:
   - The path is picked by browsing one segment at a time (pure logic in
     `src/web/picker.mjs`): a breadcrumb back to any level, groups with the
     number of paths below them, then the paths themselves with their current
-    value. A group holding nothing but one deeper group is skipped. The panel
+    value ("no value" for a sensor that reports `null`). A group holding
+    nothing but one deeper group is skipped. The panel
     reopens on the level of the saved path.
   - Quick picks above the browser offer the values put on an instrument most
     (SOG, STW, COG, HDG, depth, wind, air pressure and temperatures; the list
     is `QUICK_PICKS` in `src/web/picker.mjs`), only those the server has a
-    value for. A tap selects the path and fills any empty label with the
+    current (non-null) value for. A tap selects the path and fills any empty label with the
     abbreviation (and the display widget's top label with the full name).
   - Units are a row of buttons; minimum, maximum and decimals are +/-
     steppers (repeating while held). Min/max step by a round value (1, 2 or 5
@@ -90,7 +91,9 @@ Per widget:
     bottom while the panel scrolls.
 - Path candidates come from the server's full data tree
   (`/signalk/v1/api/vessels/self`, same-origin fetch): numeric leaves for
-  gauge/meter/display; boolean leaves — plus numeric leaves that look
+  gauge/meter/display, plus leaves whose value is `null` but whose meta has
+  `units` (a numeric sensor that has lost its reading, so a widget can still
+  be set up for it); boolean leaves — plus numeric leaves that look
   switch-like (`switches` segment or `.state` suffix) — for the switch. The
   same walk collects each path's `meta.units`.
 - Conversion selection is unit-aware (logic in `src/web/units.mjs`):
