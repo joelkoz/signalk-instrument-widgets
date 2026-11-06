@@ -35,7 +35,7 @@ function render({ config, value, meta, prefs }) {
     path: config.path
   })
   const units = config.units || symbol
-  const label = config.label || config.path || 'Not configured'
+  const label = config.path ? config.label || config.path : 'Not configured'
 
   let frac = 0
   if (typeof display === 'number' && isFinite(display) && max > min) {

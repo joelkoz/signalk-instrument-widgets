@@ -14,7 +14,7 @@ function isOn(value) {
 function render({ config, value, client }) {
   current = { config, value, client }
   const root = document.getElementById('root')
-  const label = config.label || config.path || 'Not configured'
+  const label = config.path ? config.label || config.path : 'Not configured'
   const on = isOn(value)
   const known = value !== undefined && value !== null
   root.innerHTML = `
