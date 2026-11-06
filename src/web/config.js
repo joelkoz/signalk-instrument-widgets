@@ -406,8 +406,8 @@ async function main() {
   // The browser lists only paths the server has seen, so a sensor that has
   // not reported yet can still be set up by its path.
   byId('typedPath').addEventListener('input', (ev) => {
-    const path = ev.target.value.trim()
-    if (path) pick(path, true)
+    // Clearing the field clears the path, which leaves the widget unconfigured.
+    pick(ev.target.value.trim(), true)
   })
 
   function collect() {
